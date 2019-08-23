@@ -1,6 +1,6 @@
 #' @export
-higlasso <- function(y, x, z    , lambda1, lambda2, sigma, degree = 2,
-                       maxit = 1000, halfmax = 100, eps = 1e-8)
+higlasso <- function(y, x, z, lambda1, lambda2, sigma, degree = 2,
+                       maxit = 1000, halfmax = 100, eps = 1e-6)
 {
   y <- y - mean(y)
   Xm <- lapply(1:ncol(x), function(i) splines::bs(x[,i], degree = degree))
@@ -40,6 +40,7 @@ higlasso <- function(y, x, z    , lambda1, lambda2, sigma, degree = 2,
 
   beta <- higlasso.coefs[1:length(Xm)]
   eta  <- higlasso.coefs[-(1:length(Xm))]
-  higlasso_internal(y, Xm, z, beta, eta, lambda1, lambda2, sigma, maxit,
-                        halfmax, eps)
+  print(system.time({out <- higlasso_internal(y, Xm, z, beta, eta, lambda1, lambda2, sigma, maxit,
+                        halfmax, eps)}))
+    out
 }
