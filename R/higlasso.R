@@ -48,7 +48,7 @@ higlasso <- function(y, x, z, lambda1, lambda2, sigma, degree = 2,
 
   beta <- higlasso.coefs[1:length(Xm)]
   eta  <- higlasso.coefs[-(1:length(Xm))]
-  print(system.time({out <- higlasso_internal(y, Xm, z, beta, eta, lambda1, lambda2, sigma, maxit,
+  print(system.time({out <- higlasso_internal(y, Xm, Xi, z, beta, eta, lambda1, lambda2, sigma, maxit,
                         halfmax, eps)}))
     out
 }

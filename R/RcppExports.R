@@ -10,7 +10,7 @@ generate_Xi <- function(Xm) {
 #' @export
 #' @useDynLib higlasso2
 #' @importFrom Rcpp evalCpp
-higlasso_internal <- function(Y, Xm, Z, beta, eta_init, l1, l2, sigma, maxit, halfmax, delta) {
-    .Call('_higlasso_higlasso_internal', PACKAGE = 'higlasso', Y, Xm, Z, beta, eta_init, l1, l2, sigma, maxit, halfmax, delta)
+higlasso_internal <- function(Y, Xm, Xi2, Z, beta, eta_init, l1, l2, sigma, maxit, halfmax, delta) {
+    .Call('_higlasso_higlasso_internal', PACKAGE = 'higlasso', Y, Xm, Xi2, Z, beta, eta_init, l1, l2, sigma, maxit, halfmax, delta)
 }
 

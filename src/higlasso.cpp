@@ -177,6 +177,17 @@ field <vec> initalize_eta(field <vec> eta_init, uword s)
     return eta;
 }
 
+field <mat> initalize_Xi(field <mat> Xi_init, uword s)
+{
+    field <mat> Xi = field <mat> (s, s);
+    for (uword k = 0; k < s; ++k)
+        for (uword j = 0; j < k; ++j)
+            Xi(j, k) = Xi_init(j + s * k);
+
+    return Xi;
+}
+
+
 void bls_beta(vec &Ytj, vec new_beta , field <vec> &beta, field <vec> eta,
                   field <mat> Xm, field <mat> Xi, uword j$, int halfmax,
                   double l1, double sigma)
@@ -250,14 +261,16 @@ void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
 //' @useDynLib higlasso2
 //' @importFrom Rcpp evalCpp
 // [[Rcpp::export]]
-Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm, arma::mat
-                                 Z, arma::field <arma::vec> beta, arma::field
+Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
+                                 arma::field <arma::mat> Xi_init, arma::mat Z,
+                                 arma::field <arma::vec> beta, arma::field
                                  <arma::vec> eta_init, double l1, double l2,
-                                 double sigma, int maxit, int halfmax,
-                                 double delta)
+                                 double sigma, int maxit, int halfmax, double eps)
 {
     field <vec> eta = initalize_eta(eta_init, beta.n_elem);
-    field <mat> Xi  = generate_Xi(Xm);
+    field <mat> Xi  = initalize_Xi(Xi2, beta.n_elem);
+    
+    field <vec> new_eta = eta;
 
     // initialize residuals
     vec residuals = Y;
@@ -297,7 +310,7 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm, arma::mat
         // update eta
         vec Yt = calculate_Yt(residuals, Xi, beta, eta);
         mat Xt = calculate_Xt(Xi, beta);
-        field <vec> new_eta = update_eta(Xt, Yt, eta, l2, sigma);
+        new_eta = update_eta(Xt, Yt, eta, l2, sigma);
 
         bls_eta(Yt, new_eta, eta, beta, Xi, halfmax, l2, sigma);
         residuals = Yt;
