@@ -3,10 +3,6 @@
 
 #' @useDynLib higlasso
 #' @importFrom Rcpp evalCpp
-generate_Xm <- function(Xm) {
-    .Call('_higlasso_generate_Xm', PACKAGE = 'higlasso', Xm)
-}
-
 generate_Xi <- function(Xm) {
     .Call('_higlasso_generate_Xi', PACKAGE = 'higlasso', Xm)
 }

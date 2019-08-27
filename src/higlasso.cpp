@@ -1,4 +1,4 @@
-#include<RcppArmadillo.h>
+#include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 
 using namespace arma;
@@ -6,21 +6,6 @@ using namespace arma;
 
 //' @useDynLib higlasso
 //' @importFrom Rcpp evalCpp
-// [[Rcpp::export]]
-arma::field <arma::mat> generate_Xm(arma::field <arma::mat> Xm)
-{
-    mat Q;
-    mat R;
-    for (uword k = 0; k < Xm.n_elem; ++k) {
-        if (!qr_econ(Q, R, Xm(k)))
-            Rcpp::stop("Failed to perform QR decomposition");
-
-        // Make Xm(k) have unit column variance
-        Xm(k) = Q.each_col([](vec &v){v /= stddev(v);});
-    }
-    return Xm;
-}
-
 // [[Rcpp::export]]
 arma::field <arma::mat> generate_Xi(arma::field <arma::mat> Xm)
 {
@@ -77,6 +62,27 @@ mat calculate_Xtj(mat Xmj, field <mat> Xi, field <vec> beta, field <vec> eta,
     return Xtj;
 }
 
+
+mat calculate_Xt(field <mat> Xi, field <vec> beta)
+{
+    uword p = 0;
+    for (uword k = 0; k < Xi.n_rows; ++k)
+        for (uword j = 0; j < k; ++j)
+            p += Xi(j, k).n_cols;
+
+    mat Xt = mat(Xi(0,1).n_rows, p);
+
+    p = 0;
+    for (uword k = 0; k < Xi.n_rows; ++k)
+        for (uword j = 0; j < k; ++j) {
+            uword p$ = p + Xi(j, k).n_cols;
+            Xt.cols(p,  p$ - 1) = Xi(j, k) * diagmat(kron(beta(j), beta(k)));
+            p = p$;
+        }
+    return Xt;
+}
+
+
 vec calculate_Ytj(vec residuals, field <mat> Xm, field <mat> Xi,
                       field <vec> beta, field <vec> eta, uword j$)
 {
@@ -105,18 +111,18 @@ vec calculate_D(vec v, double sigma)
 {
     vec D = abs(v);
 
-    double l2 = std::max(norm(D), EPSILON);
-    if (l2 == EPSILON)
+    double l2_norm = std::max(norm(D), EPSILON);
+    if (l2_norm == EPSILON)
         D.fill(EPSILON);
 
     // calculate D from d_k
-    double inf = norm(D, "inf");
-    double w   = exp(-inf / sigma);
+    double inf_norm = norm(D, "inf");
+    double w        = exp(-inf_norm / sigma);
     for (uword k = 0; k < D.n_elem; ++k) {
-        if (std::abs(D(k) - inf) < 1e-12)
-            D(k) =  w * (1.0 / l2 - l2 / (D(k) * sigma));
+        if (std::abs(D(k) - inf_norm) < 1e-12)
+            D(k) =  w * (1.0 / l2_norm - l2_norm / (D(k) * sigma));
         else
-            D(k) = w / l2;
+            D(k) = w / l2_norm;
     }
 
     return D;
@@ -130,13 +136,34 @@ vec update_beta_j(mat Xtj, vec Ytj, vec beta_j, double l1, double sigma)
     return inv(Xtj.t() * Xtj +  n * l1 * diagmat(D)) * (Xtj.t() * Ytj + l1 * C);
 }
 
-vec update_eta_jk(mat Xtjk, vec eta_jk, vec Yt, double l2, double sigma)
+field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma)
 {
-
     int n = Yt.n_elem;
-    vec D = calculate_D(eta_jk, sigma);
-    vec C = (abs(D) - D) % eta_jk;
-    return inv(Xtjk.t() * Xtjk + n * l2 * diagmat(D)) * (Xtjk.t() * Yt + l2 * C);
+
+    vec e = vec(Xt.n_cols);
+    vec D = vec(Xt.n_cols);
+    uword p = 0;
+    for (uword k = 0; k < eta.n_rows; ++k) {
+        for (uword j = 0; j < k; ++j) {
+            uword p$ = p + eta(j, k).n_elem;
+            e.subvec(p, p$ - 1) = eta(j, k);
+            D.subvec(p, p$ - 1) = calculate_D(eta(j, k), sigma);
+            p = p$;
+        }
+    }
+    vec C = (abs(D) - D) % e;
+    e = solve(Xt.t() * Xt + n * l2 * diagmat(D), Xt.t() * Yt + l2 * C);
+
+    p = 0;
+    field <vec> new_eta = eta;
+    for (uword k = 0; k < eta.n_rows; ++k) {
+        for (uword j = 0; j < k; ++j) {
+            uword p$ = p + eta(j, k).n_elem;
+            new_eta(j, k) = e.subvec(p, p$ - 1);
+            p = p$;
+        }
+    }
+    return new_eta;
 }
 
 field <vec> initalize_eta(field <vec> eta_init, uword s)
@@ -269,13 +296,8 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm, arma::mat
 
         // update eta
         vec Yt = calculate_Yt(residuals, Xi, beta, eta);
-        field <vec> new_eta = eta;
-        for (uword k = 0; k < beta.n_elem; ++k) {
-            for (uword j = 0; j < k; ++j) {
-                mat Xtjk = Xi(j, k) * diagmat(kron(beta(j), beta(k)));
-                new_eta(j, k) = update_eta_jk(Xtjk, eta(j, k), Yt, l2, sigma);
-            }
-        }
+        mat Xt = calculate_Xt(Xi, beta);
+        field <vec> new_eta = update_eta(Xt, Yt, eta, l2, sigma);
 
         bls_eta(Yt, new_eta, eta, beta, Xi, halfmax, l2, sigma);
         residuals = Yt;

@@ -6,17 +6,6 @@
 
 using namespace Rcpp;
 
-// generate_Xm
-arma::field <arma::mat> generate_Xm(arma::field <arma::mat> Xm);
-RcppExport SEXP _higlasso_generate_Xm(SEXP XmSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::field <arma::mat> >::type Xm(XmSEXP);
-    rcpp_result_gen = Rcpp::wrap(generate_Xm(Xm));
-    return rcpp_result_gen;
-END_RCPP
-}
 // generate_Xi
 arma::field <arma::mat> generate_Xi(arma::field <arma::mat> Xm);
 RcppExport SEXP _higlasso_generate_Xi(SEXP XmSEXP) {
@@ -51,7 +40,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_higlasso_generate_Xm", (DL_FUNC) &_higlasso_generate_Xm, 1},
     {"_higlasso_generate_Xi", (DL_FUNC) &_higlasso_generate_Xi, 1},
     {"_higlasso_higlasso_internal", (DL_FUNC) &_higlasso_higlasso_internal, 11},
     {NULL, NULL, 0}

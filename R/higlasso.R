@@ -1,12 +1,20 @@
 #' @export
 higlasso <- function(y, x, z, lambda1, lambda2, sigma, degree = 2,
-                       maxit = 1000, halfmax = 100, eps = 1e-6)
+                       maxit = 1000, halfmax = 100, eps = 1e-6, QR = TRUE)
 {
-  y <- y - mean(y)
-  Xm <- lapply(1:ncol(x), function(i) splines::bs(x[,i], degree = degree))
-  # QR decompose Xm
-  Xm <- generate_Xm(Xm)
-  Xi <- generate_Xi(Xm)
+    y <- y - mean(y)
+    generate.Xm <- function(i)
+    {
+        m <- splines::bs(x[, i], df = degree)
+        if (QR)
+            m <- qr.Q(qr(m))
+
+        m %*% diag(1 / apply(m, 2, sd))
+    }
+    Xm <- lapply(1:ncol(x), generate.Xm)
+
+    # QR decompose Xm
+    Xi <- generate_Xi(Xm)
 
 
   glasso.x <- do.call("cbind", Xm)
