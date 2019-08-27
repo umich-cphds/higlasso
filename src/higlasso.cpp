@@ -265,11 +265,11 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
                                  arma::field <arma::mat> Xi_init, arma::mat Z,
                                  arma::field <arma::vec> beta, arma::field
                                  <arma::vec> eta_init, double l1, double l2,
-                                 double sigma, int maxit, int halfmax, double eps)
+                                 double sigma, int maxit, int halfmax, double d)
 {
     field <vec> eta = initalize_eta(eta_init, beta.n_elem);
-    field <mat> Xi  = initalize_Xi(Xi2, beta.n_elem);
-    
+    field <mat> Xi  = initalize_Xi(Xi_init, beta.n_elem);
+
     field <vec> new_eta = eta;
 
     // initialize residuals
@@ -317,7 +317,7 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
 
         pen_lik1 = penalized_likelihood(residuals, beta, eta, sigma, l1, l2);
         // check penalized likelihood
-    } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= delta);
+    } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= d);
 
     double mspe = dot(residuals, residuals) / (2.0 * residuals.n_elem);
     return Rcpp::List::create(Rcpp::Named("alpha") = alpha,
