@@ -1,6 +1,6 @@
 #' @export
 higlasso <- function(y, x, z, lambda1, lambda2, sigma, degree = 2,
-                       maxit = 1000, halfmax = 100, eps = 1e-6, QR = TRUE)
+                       maxit = 1000, eps = 1e-6, QR = TRUE)
 {
     y <- y - mean(y)
     generate.Xm <- function(i)
@@ -48,7 +48,6 @@ higlasso <- function(y, x, z, lambda1, lambda2, sigma, degree = 2,
 
   beta <- higlasso.coefs[1:length(Xm)]
   eta  <- higlasso.coefs[-(1:length(Xm))]
-  print(system.time({out <- higlasso_internal(y, Xm, Xi, z, beta, eta, lambda1, lambda2, sigma, maxit,
-                        halfmax, eps)}))
+  print(system.time({out <- higlasso_internal(y, Xm, Xi, z, beta, eta, lambda1, lambda2, sigma, maxit, eps)}))
     out
 }

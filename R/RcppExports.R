@@ -2,15 +2,13 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @useDynLib higlasso
-#' @importFrom Rcpp evalCpp
 generate_Xi <- function(Xm) {
     .Call('_higlasso_generate_Xi', PACKAGE = 'higlasso', Xm)
 }
 
-#' @export
-#' @useDynLib higlasso2
+#' @useDynLib higlasso
 #' @importFrom Rcpp evalCpp
-higlasso_internal <- function(Y, Xm, Xi2, Z, beta, eta_init, l1, l2, sigma, maxit, halfmax, delta) {
-    .Call('_higlasso_higlasso_internal', PACKAGE = 'higlasso', Y, Xm, Xi2, Z, beta, eta_init, l1, l2, sigma, maxit, halfmax, delta)
+higlasso_internal <- function(Y, Xm, Xi_init, Z, beta, eta_init, l1, l2, sigma, maxit, d) {
+    .Call('_higlasso_higlasso_internal', PACKAGE = 'higlasso', Y, Xm, Xi_init, Z, beta, eta_init, l1, l2, sigma, maxit, d)
 }
 

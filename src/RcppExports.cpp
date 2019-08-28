@@ -18,14 +18,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // higlasso_internal
-Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm, arma::field <arma::mat> Xi2, arma::mat Z, arma::field <arma::vec> beta, arma::field                                  <arma::vec> eta_init, double l1, double l2, double sigma, int maxit, int halfmax, double delta);
-RcppExport SEXP _higlasso_higlasso_internal(SEXP YSEXP, SEXP XmSEXP, SEXP Xi2SEXP, SEXP ZSEXP, SEXP betaSEXP, SEXP eta_initSEXP, SEXP l1SEXP, SEXP l2SEXP, SEXP sigmaSEXP, SEXP maxitSEXP, SEXP halfmaxSEXP, SEXP deltaSEXP) {
+Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm, arma::field <arma::mat> Xi_init, arma::mat Z, arma::field <arma::vec> beta, arma::field                                  <arma::vec> eta_init, double l1, double l2, double sigma, int maxit, double d);
+RcppExport SEXP _higlasso_higlasso_internal(SEXP YSEXP, SEXP XmSEXP, SEXP Xi_initSEXP, SEXP ZSEXP, SEXP betaSEXP, SEXP eta_initSEXP, SEXP l1SEXP, SEXP l2SEXP, SEXP sigmaSEXP, SEXP maxitSEXP, SEXP dSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec >::type Y(YSEXP);
     Rcpp::traits::input_parameter< arma::field <arma::mat> >::type Xm(XmSEXP);
-    Rcpp::traits::input_parameter< arma::field <arma::mat> >::type Xi2(Xi2SEXP);
+    Rcpp::traits::input_parameter< arma::field <arma::mat> >::type Xi_init(Xi_initSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type Z(ZSEXP);
     Rcpp::traits::input_parameter< arma::field <arma::vec> >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< arma::field                                  <arma::vec> >::type eta_init(eta_initSEXP);
@@ -33,16 +33,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type l2(l2SEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
-    Rcpp::traits::input_parameter< int >::type halfmax(halfmaxSEXP);
-    Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
-    rcpp_result_gen = Rcpp::wrap(higlasso_internal(Y, Xm, Xi2, Z, beta, eta_init, l1, l2, sigma, maxit, halfmax, delta));
+    Rcpp::traits::input_parameter< double >::type d(dSEXP);
+    rcpp_result_gen = Rcpp::wrap(higlasso_internal(Y, Xm, Xi_init, Z, beta, eta_init, l1, l2, sigma, maxit, d));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_higlasso_generate_Xi", (DL_FUNC) &_higlasso_generate_Xi, 1},
-    {"_higlasso_higlasso_internal", (DL_FUNC) &_higlasso_higlasso_internal, 12},
+    {"_higlasso_higlasso_internal", (DL_FUNC) &_higlasso_higlasso_internal, 11},
     {NULL, NULL, 0}
 };
 

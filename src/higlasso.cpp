@@ -2,10 +2,11 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 
 using namespace arma;
+
 #define EPSILON 1e-10
+#define HALFMAX 100
 
 //' @useDynLib higlasso
-//' @importFrom Rcpp evalCpp
 // [[Rcpp::export]]
 arma::field <arma::mat> generate_Xi(arma::field <arma::mat> Xm)
 {
@@ -47,8 +48,8 @@ double penalized_likelihood(vec residuals, field <vec> beta, field <vec> eta,
     return 0.5 * dot(residuals, residuals) + l1 * beta_reg + l2 * eta_reg;
 }
 
-mat calculate_Xtj(mat Xmj, field <mat> Xi, field <vec> beta, field <vec> eta,
-                      uword j)
+mat calculate_Xtj(mat Xmj, std::function <mat (uword, uword)> Xi, field <vec>
+                      beta, field <vec> eta, uword j)
 {
     mat Xtj  = Xmj;
     mat I_pj = eye <mat> (beta(j).n_elem, beta(j).n_elem);
@@ -62,18 +63,17 @@ mat calculate_Xtj(mat Xmj, field <mat> Xi, field <vec> beta, field <vec> eta,
     return Xtj;
 }
 
-
-mat calculate_Xt(field <mat> Xi, field <vec> beta)
+mat calculate_Xt(std::function <mat (uword, uword)> Xi, field <vec> beta)
 {
     uword p = 0;
-    for (uword k = 0; k < Xi.n_rows; ++k)
+    for (uword k = 0; k < beta.n_elem; ++k)
         for (uword j = 0; j < k; ++j)
             p += Xi(j, k).n_cols;
 
     mat Xt = mat(Xi(0,1).n_rows, p);
 
     p = 0;
-    for (uword k = 0; k < Xi.n_rows; ++k)
+    for (uword k = 0; k < beta.n_elem; ++k)
         for (uword j = 0; j < k; ++j) {
             uword p$ = p + Xi(j, k).n_cols;
             Xt.cols(p,  p$ - 1) = Xi(j, k) * diagmat(kron(beta(j), beta(k)));
@@ -82,9 +82,9 @@ mat calculate_Xt(field <mat> Xi, field <vec> beta)
     return Xt;
 }
 
-
-vec calculate_Ytj(vec residuals, field <mat> Xm, field <mat> Xi,
-                      field <vec> beta, field <vec> eta, uword j$)
+vec calculate_Ytj(vec residuals, field <mat> Xm, std::function
+                      <mat (uword, uword)> Xi, field <vec> beta, field <vec>
+                      eta, uword j$)
 {
     vec Ytj = residuals;
     Ytj += Xm(j$) * beta(j$);
@@ -96,7 +96,8 @@ vec calculate_Ytj(vec residuals, field <mat> Xm, field <mat> Xi,
     return Ytj;
 }
 
-vec calculate_Yt(vec residuals, field <mat> Xi, field <vec> beta, field <vec> eta)
+vec calculate_Yt(vec residuals, std::function <mat (uword, uword)> Xi,
+                     field <vec> beta, field <vec> eta)
 {
     vec Yt = residuals;
     for (uword j$ = 0; j$ < beta.n_elem; ++j$)
@@ -105,7 +106,6 @@ vec calculate_Yt(vec residuals, field <mat> Xi, field <vec> beta, field <vec> et
 
     return Yt;
 }
-
 
 vec calculate_D(vec v, double sigma)
 {
@@ -177,22 +177,19 @@ field <vec> initalize_eta(field <vec> eta_init, uword s)
     return eta;
 }
 
-field <mat> initalize_Xi(field <mat> Xi_init, uword s)
+std::function <mat (uword, uword)> initalize_Xi(field <mat> &Xi_init, uword s)
 {
-    field <mat> Xi = field <mat> (s, s);
-    for (uword k = 0; k < s; ++k)
-        for (uword j = 0; j < k; ++j)
-            Xi(j, k) = Xi_init(j + s * k);
-
-    return Xi;
+    std::function <mat (uword, uword)> f = [s, &Xi_init] (uword j, uword k) ->
+        mat {
+            return Xi_init(j + s * k);
+        };
+    return f;
 }
 
-
-void bls_beta(vec &Ytj, vec new_beta , field <vec> &beta, field <vec> eta,
-                  field <mat> Xm, field <mat> Xi, uword j$, int halfmax,
-                  double l1, double sigma)
+void bls_beta(vec &Ytj, vec new_beta, field <vec> &beta, field <vec> eta,
+                  field <mat> Xm, std::function <mat (uword, uword)> Xi,
+                  uword j$, double l1, double sigma)
 {
-
     vec Ytj_org = Ytj;
     auto ppen_lik = [&](double omega)
     {
@@ -217,9 +214,10 @@ void bls_beta(vec &Ytj, vec new_beta , field <vec> &beta, field <vec> eta,
     };
 
 
+    int i = HALFMAX;
     double pen0  = ppen_lik(0.0);
     double omega = 1.0;
-    while (ppen_lik(omega) > pen0 && halfmax--)
+    while (ppen_lik(omega) > pen0 && i--)
         omega /= 2.0;
 
 
@@ -227,9 +225,9 @@ void bls_beta(vec &Ytj, vec new_beta , field <vec> &beta, field <vec> eta,
 
 }
 
-
+// performs backtracking line search for eta. Yt and eta are modified.
 void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
-                 field <mat> Xi, int halfmax, double l2, double sigma)
+                 std::function <mat (uword, uword)> Xi, double l2, double sigma)
 {
     vec Yt_org = Yt;
     auto ppen_lik = [&](double omega)
@@ -246,9 +244,10 @@ void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
         return 0.5 * dot(Yt, Yt) + l2 * eta_reg;
     };
 
+    int i = HALFMAX;
     double pen0  = ppen_lik(0.0);
     double omega = 1.0;
-    while (ppen_lik(omega) > pen0 && halfmax--)
+    while (ppen_lik(omega) > pen0 && i--)
         omega /= 2.0;
 
     for (uword k = 0; k < beta.n_elem; ++k)
@@ -256,19 +255,17 @@ void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
             eta(j, k) = omega * new_eta(j, k) + (1.0 - omega) * eta(j, k);
 }
 
-
-//' @export
-//' @useDynLib higlasso2
+//' @useDynLib higlasso
 //' @importFrom Rcpp evalCpp
 // [[Rcpp::export]]
 Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
                                  arma::field <arma::mat> Xi_init, arma::mat Z,
                                  arma::field <arma::vec> beta, arma::field
                                  <arma::vec> eta_init, double l1, double l2,
-                                 double sigma, int maxit, int halfmax, double d)
+                                 double sigma, int maxit, double d)
 {
     field <vec> eta = initalize_eta(eta_init, beta.n_elem);
-    field <mat> Xi  = initalize_Xi(Xi_init, beta.n_elem);
+    auto Xi = initalize_Xi(Xi_init, beta.n_elem);
 
     field <vec> new_eta = eta;
 
@@ -302,7 +299,7 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
             vec Ytj = calculate_Ytj(residuals, Xm, Xi, beta, eta, j);
             vec new_beta = update_beta_j(Xtj, Ytj, beta(j), l1, sigma);
 
-            bls_beta(Ytj, new_beta, beta, eta, Xm, Xi, j, halfmax, l1, sigma);
+            bls_beta(Ytj, new_beta, beta, eta, Xm, Xi, j, l1, sigma);
 
             residuals = Ytj;
         }
@@ -312,7 +309,7 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
         mat Xt = calculate_Xt(Xi, beta);
         new_eta = update_eta(Xt, Yt, eta, l2, sigma);
 
-        bls_eta(Yt, new_eta, eta, beta, Xi, halfmax, l2, sigma);
+        bls_eta(Yt, new_eta, eta, beta, Xi, l2, sigma);
         residuals = Yt;
 
         pen_lik1 = penalized_likelihood(residuals, beta, eta, sigma, l1, l2);
