@@ -1,7 +1,7 @@
 Package: higlasso
 Title: Hierarchical Integrative Group LASSO
 Version: 0.0.0.9000
-Authors@R: 
+Authors@R:
     person(given = "Alexander",
            family = "Rix",
            role = c("aut", "cre"),
@@ -13,9 +13,9 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
 Depends:
-    gglasso
-LinkingTo: 
+    gcdnet
+LinkingTo:
     Rcpp,
     RcppArmadillo
-Imports: 
+Imports:
     Rcpp
