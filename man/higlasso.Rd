@@ -4,8 +4,9 @@
 \alias{higlasso}
 \title{Hierarchical Integrative Group LASSO}
 \usage{
-higlasso(Y, X, Z, lambda1, lambda2, sigma, degree = 2, maxit = 1000,
-  eps = 1e-06, QR = TRUE)
+higlasso(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL, degree = 2,
+  maxit = 1000, eps = 1e-06, QR = TRUE, tol = .Machine$double.eps,
+  faster = FALSE)
 }
 \arguments{
 \item{Y}{A length n numeric response vector}
@@ -18,7 +19,11 @@ higlasso(Y, X, Z, lambda1, lambda2, sigma, degree = 2, maxit = 1000,
 
 \item{lambda2}{Penalty for interaction effects}
 
-\item{sigma}{Scale parameter for Integrative weights}
+\item{sigma}{Scale parameter for Integrative weights. Technically a third
+tuning paramter but defaults to 1 for computational tractibility}
+
+\item{Xm}{An optional list of design matrices if the user wishes to use their
+own groupings instead of a basis expansion}
 
 \item{degree}{Degree of \code{bs} basis expansion. Default is 2}
 
@@ -27,6 +32,12 @@ higlasso(Y, X, Z, lambda1, lambda2, sigma, degree = 2, maxit = 1000,
 \item{eps}{Numeric tolerance for convergence. Defaults to 1e-6}
 
 \item{QR}{Whether or not to QR decompose the design matrix. Default is TRUE}
+
+\item{tol}{Tolerance for RcppArmadillo solve. This is separate from \code{eps}.
+Default is machine epsilon}
+
+\item{faster}{If TRUE, higlasso will be faster, but possibly less accurate.
+Default is FALSE.}
 }
 \description{
 Hierarchical Integrative Group LASSO

@@ -1,19 +1,29 @@
 Package: higlasso
 Title: Hierarchical Integrative Group LASSO
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R:
     person(given = "Alexander",
            family = "Rix",
            role = c("aut", "cre"),
            email = "alexrix@umich.edu")
-Description: What the package does (one paragraph).
+Description:
+    Environmental health studies are increasingly measuring multiple pollutants
+    to  characterize the joint health effects attributable to exposure mixtures.
+    However, the underlying dose-response relation- ship between toxicants and
+    health outcomes of interest may be highly nonlinear, with possible nonlinear
+    interaction effects. We present hierarchical integrative group LASSO
+    (HiGLASSO), a general shrinkage and selection framework to identify
+    noteworthy nonlinear main and interaction. HiGLASSO is broadly applicable
+    for studying potential nonlinear main and interaction effects in the
+    presence of group structures effects among a set of exposures.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
 Depends:
-    gcdnet
+    gcdnet,
+    splines
 LinkingTo:
     Rcpp,
     RcppArmadillo

@@ -18,8 +18,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // higlasso_internal
-Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm, arma::field <arma::mat> Xi_init, arma::mat Z, arma::field <arma::vec> beta, arma::field                                  <arma::vec> eta_init, double l1, double l2, double sigma, int maxit, double d);
-RcppExport SEXP _higlasso_higlasso_internal(SEXP YSEXP, SEXP XmSEXP, SEXP Xi_initSEXP, SEXP ZSEXP, SEXP betaSEXP, SEXP eta_initSEXP, SEXP l1SEXP, SEXP l2SEXP, SEXP sigmaSEXP, SEXP maxitSEXP, SEXP dSEXP) {
+Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm, arma::field <arma::mat> Xi_init, arma::mat Z, arma::field <arma::vec> beta, arma::field                                  <arma::vec> eta_init, double l1, double l2, double sigma, int maxit, double eps, double tol, int fast);
+RcppExport SEXP _higlasso_higlasso_internal(SEXP YSEXP, SEXP XmSEXP, SEXP Xi_initSEXP, SEXP ZSEXP, SEXP betaSEXP, SEXP eta_initSEXP, SEXP l1SEXP, SEXP l2SEXP, SEXP sigmaSEXP, SEXP maxitSEXP, SEXP epsSEXP, SEXP tolSEXP, SEXP fastSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -33,15 +33,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type l2(l2SEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
-    Rcpp::traits::input_parameter< double >::type d(dSEXP);
-    rcpp_result_gen = Rcpp::wrap(higlasso_internal(Y, Xm, Xi_init, Z, beta, eta_init, l1, l2, sigma, maxit, d));
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< int >::type fast(fastSEXP);
+    rcpp_result_gen = Rcpp::wrap(higlasso_internal(Y, Xm, Xi_init, Z, beta, eta_init, l1, l2, sigma, maxit, eps, tol, fast));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_higlasso_generate_Xi", (DL_FUNC) &_higlasso_generate_Xi, 1},
-    {"_higlasso_higlasso_internal", (DL_FUNC) &_higlasso_higlasso_internal, 11},
+    {"_higlasso_higlasso_internal", (DL_FUNC) &_higlasso_higlasso_internal, 13},
     {NULL, NULL, 0}
 };
 

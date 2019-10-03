@@ -111,15 +111,15 @@ vec calculate_D(vec v, double sigma)
 {
     vec D = abs(v);
 
-    double l2_norm = std::max(norm(D), EPSILON);
-    if (l2_norm == EPSILON)
+    if (norm(D, "inf") < EPSILON)
         D.fill(EPSILON);
 
+    double l2_norm = norm(D);
     // calculate D from d_k
     double inf_norm = norm(D, "inf");
     double w        = exp(-inf_norm / sigma);
     for (uword k = 0; k < D.n_elem; ++k) {
-        if (std::abs(D(k) - inf_norm) < 1e-12)
+        if (inf_norm - D(k) < 1e-12)
             D(k) =  w * (1.0 / l2_norm - l2_norm / (D(k) * sigma));
         else
             D(k) = w / l2_norm;
@@ -128,15 +128,27 @@ vec calculate_D(vec v, double sigma)
     return D;
 }
 
-vec update_beta_j(mat Xtj, vec Ytj, vec beta_j, double l1, double sigma)
+vec update_beta_j(mat Xtj, vec Ytj, vec beta_j, double l1, double sigma,
+                      double tol, int fast)
 {
     int n = Ytj.n_elem;
     vec D = calculate_D(beta_j, sigma);
     vec C = (abs(D) - D) % beta_j;
-    return inv(Xtj.t() * Xtj +  n * l1 * diagmat(D)) * (Xtj.t() * Ytj + l1 * C);
+
+    mat M = Xtj.t() * Xtj +  n * l1 * diagmat(D);
+
+    if (rcond(M) < tol)
+        Rcpp::warning("large condition number!\n");
+
+    if (fast)
+        return solve(M, Xtj.t() * Ytj + l1 * C, solve_opts::likely_sympd +
+                      solve_opts::fast);
+    else
+        return solve(M, Xtj.t() * Ytj + l1 * C);
 }
 
-field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma)
+field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma,
+                           double tol, int fast)
 {
     int n = Yt.n_elem;
 
@@ -152,7 +164,18 @@ field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma)
         }
     }
     vec C = (abs(D) - D) % e;
-    e = solve(Xt.t() * Xt + n * l2 * diagmat(D), Xt.t() * Yt + l2 * C);
+
+    //
+    mat M = Xt.t() * Xt + n * l2 * diagmat(D);
+
+    if (rcond(M) < tol)
+        Rcpp::warning("large condition number!\n");
+
+    if (fast)
+        e = solve(M, Xt.t() * Yt + l2 * C, solve_opts::likely_sympd +
+                      solve_opts::fast);
+    else
+        e = solve(M, Xt.t() * Yt + l2 * C);
 
     p = 0;
     field <vec> new_eta = eta;
@@ -262,7 +285,8 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
                                  arma::field <arma::mat> Xi_init, arma::mat Z,
                                  arma::field <arma::vec> beta, arma::field
                                  <arma::vec> eta_init, double l1, double l2,
-                                 double sigma, int maxit, double d)
+                                 double sigma, int maxit, double eps, double tol,
+                                 int fast)
 {
     field <vec> eta = initalize_eta(eta_init, beta.n_elem);
     auto Xi = initalize_Xi(Xi_init, beta.n_elem);
@@ -297,9 +321,9 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
         for (uword j = 0; j < beta.n_elem; ++j) {
             mat Xtj = calculate_Xtj(Xm(j), Xi, beta, eta, j);
             vec Ytj = calculate_Ytj(residuals, Xm, Xi, beta, eta, j);
-            vec new_beta = update_beta_j(Xtj, Ytj, beta(j), l1, sigma);
+            vec b   = update_beta_j(Xtj, Ytj, beta(j), l1, sigma, tol, fast);
 
-            bls_beta(Ytj, new_beta, beta, eta, Xm, Xi, j, l1, sigma);
+            bls_beta(Ytj, b, beta, eta, Xm, Xi, j, l1, sigma);
 
             residuals = Ytj;
         }
@@ -307,15 +331,18 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
         // update eta
         vec Yt = calculate_Yt(residuals, Xi, beta, eta);
         mat Xt = calculate_Xt(Xi, beta);
-        new_eta = update_eta(Xt, Yt, eta, l2, sigma);
+        new_eta = update_eta(Xt, Yt, eta, l2, sigma, tol, fast);
 
         bls_eta(Yt, new_eta, eta, beta, Xi, l2, sigma);
         residuals = Yt;
 
         pen_lik1 = penalized_likelihood(residuals, beta, eta, sigma, l1, l2);
         // check penalized likelihood
-    } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= d);
+    } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= eps);
 
+    if (it >= maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= eps)
+        Rcpp::warning("'maxit' reached without convergence.\n");
+        
     double mspe = dot(residuals, residuals) / (2.0 * residuals.n_elem);
     return Rcpp::List::create(Rcpp::Named("alpha") = alpha,
         Rcpp::Named("beta") = beta, Rcpp::Named("eta") = eta,
