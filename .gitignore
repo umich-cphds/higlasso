@@ -2,6 +2,8 @@
 *.so
 *.dll
 
+*.Rcheck
+higlasso_*
 .RData
 .Rhistory
 *.R
