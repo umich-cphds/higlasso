@@ -23,17 +23,16 @@
 #' @param degree Degree of \code{bs} basis expansion. Default is 2
 #' @param maxit Maximum number of iterations. Default is 1000
 #' @param eps Numeric tolerance for convergence. Defaults to 1e-6
-#' @param QR Whether or not to QR decompose the design matrix. Default is TRUE
 #' @param tol Tolerance for RcppArmadillo solve. This is separate from \code{eps}.
 #'     Default is machine epsilon
 #' @param faster If TRUE, higlasso will be faster, but possibly less accurate.
-#'     Default is FALSE.
+#'     Default is FALSE
 #' @examples TODO
 #' @author Alexander Rix
 #' @export
 higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
-                         degree = 2, maxit = 1000, eps = 1e-6, QR = TRUE,
-                         tol = .Machine$double.eps, faster = FALSE)
+                         degree = 2, maxit = 1000, eps = 1e-6, tol =
+                         .Machine$double.eps, faster = FALSE)
 {
     if (!is.vector(Y) || !is.numeric(Y))
         stop("'Y' must be a numeric vector.")
@@ -98,27 +97,25 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
     if (!is.numeric(eps) || eps <= 0)
         stop("'eps' should be a postive number.")
 
-    if (!is.logical(QR))
-        stop("'QR' must take on a logical value.")
-
     if (!is.logical(faster))
         stop("'faster' must take on a logical value.")
 
-    Y <- Y - mean(Y)
     if (is.null(Xm)) {
         generate.Xm <- function(i)
         {
             m <- splines::bs(X[, i], degree = degree)
-            if (QR)
             m <- qr.Q(qr(m))
-
-            apply(m, 2, function(x) x / sd(x))
+            apply(m, 2, function(x) x / stats::sd(x))
         }
 
         Xm <- lapply(1:ncol(X), generate.Xm)
+        if (is.null(colnames(X)))
+            colnames(X) <- 1:ncol(X)
+        names(Xm) <- paste0("bs(", colnames(X), ")")
     }
+    if (is.null(names(Xm)))
+        names(Xm) <- paste0("G", 1:length(Xm))
 
-    # QR decompose Xm
     Xi <- generate_Xi(Xm)
 
     X.init <- do.call("cbind", Xm)
@@ -149,13 +146,13 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
 
     # get the best scoring lambda from gcdnet and use that to generate inital
     # weights for the adpative elastic net
-    i <- which.min(apply(predict(e.net, X.init), 2, function(p) mean((p - y)^2)))
+    i <- which.min(apply(stats::predict(e.net, X.init), 2, function(p) mean((p - Y)^2)))
 
     ada.e.weights <- 1 / (e.net$beta[1:nx, i] + 1 / nrow(X.init))
     ada.e.weights <- c(ada.e.weights, rep(0, ncol(Z)))
 
 
-    ada.e.net <- gcdnet::gcdnet(X.init, y, method = "ls", lambda = lambda1,
+    ada.e.net <- gcdnet::gcdnet(X.init, Y, method = "ls", lambda = lambda1,
                                     lambda2 = lambda2, pf = ada.e.weights,
                                     eps = eps, maxit = maxit)
 
@@ -175,17 +172,78 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
     higlasso.out <- higlasso_internal(Y, Xm, Xi, Z, beta, eta, lambda1, lambda2,
                                           sigma, maxit, eps, tol, faster)
 
+    n <- length(Xm)
+    names(higlasso.out$beta) <- names(Xm)
+    for (i in 1:n)
+        higlasso.out$beta[[i]] <- round(higlasso.out$beta[[i]], 9)
+    for (j in 1:n)
+        for (i in 1:n)
+            higlasso.out$eta[[i, j]] <- round(higlasso.out$eta[[i, j]], 9)
+
     higlasso.out$Y <- Y
     higlasso.out$Xm <- Xm
     higlasso.out$Xi <- Xi
     higlasso.out$Z <- Z
+    higlasso.out$degree <- degree
+    higlasso.out$lambda <- c(lambda1, lambda2)
 
     class(higlasso.out) <- "higlasso"
     higlasso.out
 }
 
+#' Print higlasso fits
+#' @param x An object of type 'higlasso'
+#' @param ... Additional parameters to pass onto print
+#' @export
+print.higlasso <- function(x, ...)
+{
+    if (class(x) != "higlasso")
+        stop("'object' is not a higlasso fit.")
 
+    sum <- summary.higlasso(x)
 
+    cat("HiGLASSO fit\n")
+    cat("Selected main effects:\n")
+    print(sum$main, zero.print = "", right = F)
+    cat("Selected interaction effects:\n")
+    print(sum$inter, zero.print = "", right = F)
+    cat(sprintf("Mean squared prediction error: %f\n", sum$mspe))
+    cat("Lambda = ")
+    cat(sum$lambda)
+    cat("\n")
+}
+
+#' Summarise higlasso fits
+#' @param object An object of type 'higlasso'
+#' @param ... Additional parameters to pass on.
+#' @export
+summary.higlasso <- function(object, ...)
+{
+    if (class(object) != "higlasso")
+        stop("'object' is not a higlasso fit.")
+
+    main <- sapply(object$beta, function(b) ifelse(any(b != 0), 1, 0))
+    n <- length(object$Xm)
+    inter <- matrix(NA, n, n)
+    for (j in 1:n)
+        for (i in 1:n)
+            if (nrow(object$eta[[i, j]]) > 0) {
+                if (any(object$eta[[i, j]] != 0))
+                    inter[i , j] <- 1
+                else
+                    inter[i, j] <- 0
+            }
+    colnames(inter) <- rownames(inter) <- names(object$beta)
+    list(main = as.table(main), inter = as.table(t(inter)), mspe = object$mspe,
+         lambda = object$lambda)
+}
+
+#' Predict via a higlasso fit
+#' @param object An object of type 'higlasso'
+#' @param newdata An optional list of length 3, conataining new Y, new Xm, and
+#'     new Z. For experts only.
+#' @param ... Additonal parameters to pass on
+#' @export
 predict.higlasso <- function(object, newdata, ...)
 {
     if (class(object) != "higlasso")
@@ -195,27 +253,29 @@ predict.higlasso <- function(object, newdata, ...)
     eta  <- object$eta
 
     if (!missing(newdata)) {
-        if (!is.list(newdata) || length(newdata) != 4)
-            stop("'newdata' should be a length 4 list.")
+        if (!is.list(newdata) || length(newdata) != 3)
+            stop("'newdata' should be a length 3 list.")
         Y  <- newdata[[1]]
         Xm <- newdata[[2]]
-        Xi <- newdata[[3]]
-        Z  <- newdata[[4]]
+        Xi <- generate_Xi(Xm)
+        Z  <- newdata[[3]]
     }
     else {
-        res <- object$Y - object$Z %*% object$alpha
+        Y <- object$Y
         Xm  <- object$Xm
         Xi  <- object$Xi
-        for (i in 1:n.groups)
-            res <- res - Xm[[i]] %*% beta[[i]]
-
-        for (j in 1:n.groups)
-            for (i in 1:n.groups) {
-                if (nrow(eta[[i, j]]) > 0) {
-                    e <- eta[[i, j]] * kronecker(beta[[i]], beta[[j]])
-                    res <- res - Xi[[i, j]] %*% e
-                }
-            }
+        Z <- object$Z
     }
+    res <- Y - Z %*% object$alpha
+    for (i in 1:n.groups)
+        res <- res - (Xm[[i]] %*% beta[[i]])
+
+    for (j in 1:n.groups)
+        for (i in 1:n.groups) {
+            if (nrow(eta[[i, j]]) > 0) {
+                e <- eta[[i, j]] * kronecker(beta[[i]], beta[[j]])
+                res <- res - Xi[[i, j]] %*% e
+            }
+        }
     0.5 * mean(res * res)
 }

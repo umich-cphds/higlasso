@@ -1,6 +1,6 @@
 Package: higlasso
 Title: Hierarchical Integrative Group LASSO
-Version: 0.0.1
+Version: 0.1.0
 Authors@R:
     person(given = "Alexander",
            family = "Rix",
@@ -15,17 +15,16 @@ Description:
     (HiGLASSO), a general shrinkage and selection framework to identify
     noteworthy nonlinear main and interaction. HiGLASSO is broadly applicable
     for studying potential nonlinear main and interaction effects in the
-    presence of group structures effects among a set of exposures.
+    presence of group structures among a set of exposures.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
-Depends:
+Imports:
     gcdnet,
-    splines
+    splines,
+    Rcpp
 LinkingTo:
     Rcpp,
     RcppArmadillo
-Imports:
-    Rcpp

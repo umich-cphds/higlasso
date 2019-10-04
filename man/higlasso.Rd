@@ -5,7 +5,7 @@
 \title{Hierarchical Integrative Group LASSO}
 \usage{
 higlasso(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL, degree = 2,
-  maxit = 1000, eps = 1e-06, QR = TRUE, tol = .Machine$double.eps,
+  maxit = 1000, eps = 1e-06, tol = .Machine$double.eps,
   faster = FALSE)
 }
 \arguments{
@@ -31,16 +31,25 @@ own groupings instead of a basis expansion}
 
 \item{eps}{Numeric tolerance for convergence. Defaults to 1e-6}
 
-\item{QR}{Whether or not to QR decompose the design matrix. Default is TRUE}
-
 \item{tol}{Tolerance for RcppArmadillo solve. This is separate from \code{eps}.
 Default is machine epsilon}
 
 \item{faster}{If TRUE, higlasso will be faster, but possibly less accurate.
-Default is FALSE.}
+Default is FALSE}
 }
 \description{
-Hierarchical Integrative Group LASSO
+TODO
+}
+\details{
+We have designed \code{higlasso} to
+\itemize{
+\item Impose strong heredity constraints on two-way interaction effects
+(hierarchical).
+\item Incorporate adaptive weights without necessitating initial
+coefficient estimates.
+\item Induce sparsity for variable selection while respecting group
+structure (group LASSO).
+}
 }
 \examples{
 TODO
