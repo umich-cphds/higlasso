@@ -1,0 +1,6 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\*.Rcheck
+^higlasso_*
+cran-comments.md
+^CRAN-RELEASE$
