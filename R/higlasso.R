@@ -139,14 +139,15 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
 
     e.net <- gcdnet::gcdnet(X.init, Y, method = "ls", lambda2 = lambda2,
                                 pf = weights, pf2 = weights, eps = eps,
-                                maxit = maxit)
+                                maxit = max(maxit, 1e6))
 
     if (e.net$jerr != 0)
         stop("Error in gcdnet::gcdnet.")
 
     # get the best scoring lambda from gcdnet and use that to generate inital
     # weights for the adpative elastic net
-    i <- which.min(apply(stats::predict(e.net, X.init), 2, function(p) mean((p - Y)^2)))
+    mse <- function(p) mean((p - Y)^2)
+    i <- which.min(apply(stats::predict(e.net, X.init), 2, mse))
 
     ada.e.weights <- 1 / (e.net$beta[1:nx, i] + 1 / nrow(X.init))
     ada.e.weights <- c(ada.e.weights, rep(0, ncol(Z)))
@@ -154,7 +155,7 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
 
     ada.e.net <- gcdnet::gcdnet(X.init, Y, method = "ls", lambda = lambda1,
                                     lambda2 = lambda2, pf = ada.e.weights,
-                                    eps = eps, maxit = maxit)
+                                    eps = eps, maxit = max(maxit, 1e6))
 
     coefs <- ada.e.net$beta[1:nx]
 

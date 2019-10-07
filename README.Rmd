@@ -37,8 +37,8 @@ Z.train <- matrix(1, 400)
 Z.test  <- matrix(1, 100)
 
 
-l1 <- c(.5, .75, 1)
-l2 <- c(.5, .75, 1)
+l1 <- 1:10/10
+l2 <- 1:10/10
 
 best.mspe   <- 999
 best.lambda <- c(999, 999)

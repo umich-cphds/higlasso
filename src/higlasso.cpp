@@ -137,12 +137,13 @@ vec update_beta_j(mat Xtj, vec Ytj, vec beta_j, double l1, double sigma,
 
     mat M = Xtj.t() * Xtj +  n * l1 * diagmat(D);
 
-    if (rcond(M) < tol)
-        Rcpp::warning("large condition number!\n");
 
-    if (fast)
+    if (fast) {
+        if (rcond(M) < tol)
+        Rcpp::warning("large condition number!\n");
         return solve(M, Xtj.t() * Ytj + l1 * C, solve_opts::likely_sympd +
-                      solve_opts::fast);
+                     solve_opts::fast);
+    }
     else
         return solve(M, Xtj.t() * Ytj + l1 * C);
 }
@@ -168,12 +169,14 @@ field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma,
     //
     mat M = Xt.t() * Xt + n * l2 * diagmat(D);
 
-    if (rcond(M) < tol)
-        Rcpp::warning("large condition number!\n");
 
-    if (fast)
+    if (fast) {
+        if (rcond(M) < tol)
+            Rcpp::warning("large condition number!\n");
+
         e = solve(M, Xt.t() * Yt + l2 * C, solve_opts::likely_sympd +
                       solve_opts::fast);
+    }
     else
         e = solve(M, Xt.t() * Yt + l2 * C);
 
@@ -341,8 +344,9 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
     } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= eps);
 
     if (it >= maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= eps)
-        Rcpp::warning("'maxit' reached without convergence.\n");
-        
+        Rcpp::warning("'maxit' reached without convergence: %f > %f\n",
+        (pen_lik0 - pen_lik1) / pen_lik0, eps);
+
     double mspe = dot(residuals, residuals) / (2.0 * residuals.n_elem);
     return Rcpp::List::create(Rcpp::Named("alpha") = alpha,
         Rcpp::Named("beta") = beta, Rcpp::Named("eta") = eta,

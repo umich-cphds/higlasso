@@ -4,6 +4,6 @@
 
 *.Rcheck
 higlasso_*
-.RData
+^*.RData
 .Rhistory
-*.R
+^*.R
