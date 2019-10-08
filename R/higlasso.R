@@ -22,17 +22,12 @@
 #'     own groupings instead of a basis expansion
 #' @param degree Degree of \code{bs} basis expansion. Default is 2
 #' @param maxit Maximum number of iterations. Default is 1000
-#' @param eps Numeric tolerance for convergence. Defaults to 1e-6
-#' @param tol Tolerance for RcppArmadillo solve. This is separate from \code{eps}.
-#'     Default is machine epsilon
-#' @param faster If TRUE, higlasso will be faster, but possibly less accurate.
-#'     Default is FALSE
+#' @param delta Numeric tolerance for convergence. Defaults to 1e-6
 #' @examples TODO
 #' @author Alexander Rix
 #' @export
 higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
-                         degree = 2, maxit = 1000, eps = 1e-6, tol =
-                         .Machine$double.eps, faster = FALSE)
+                         degree = 2, maxit = 1000, delta = 1e-5)
 {
     if (!is.vector(Y) || !is.numeric(Y))
         stop("'Y' must be a numeric vector.")
@@ -94,11 +89,8 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
     if (!is.numeric(maxit) || maxit < 1)
         stop("'maxit' should be an integer >= 1.")
 
-    if (!is.numeric(eps) || eps <= 0)
-        stop("'eps' should be a postive number.")
-
-    if (!is.logical(faster))
-        stop("'faster' must take on a logical value.")
+    if (!is.numeric(delta) || delta <= 0)
+        stop("'delta' should be a postive number.")
 
     if (is.null(Xm)) {
         generate.Xm <- function(i)
@@ -138,7 +130,7 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
     weights <- c(rep(1, nx), rep(0, ncol(Z)))
 
     e.net <- gcdnet::gcdnet(X.init, Y, method = "ls", lambda2 = lambda2,
-                                pf = weights, pf2 = weights, eps = eps,
+                                pf = weights, pf2 = weights, eps = delta,
                                 maxit = max(maxit, 1e6))
 
     if (e.net$jerr != 0)
@@ -155,7 +147,7 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
 
     ada.e.net <- gcdnet::gcdnet(X.init, Y, method = "ls", lambda = lambda1,
                                     lambda2 = lambda2, pf = ada.e.weights,
-                                    eps = eps, maxit = max(maxit, 1e6))
+                                    eps = delta, maxit = max(maxit, 1e6))
 
     coefs <- ada.e.net$beta[1:nx]
 
@@ -171,15 +163,15 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
     beta <- higlasso.coefs[1:length(Xm)]
     eta  <- higlasso.coefs[-(1:length(Xm))]
     higlasso.out <- higlasso_internal(Y, Xm, Xi, Z, beta, eta, lambda1, lambda2,
-                                          sigma, maxit, eps, tol, faster)
+                                          sigma, maxit, delta)
 
     n <- length(Xm)
     names(higlasso.out$beta) <- names(Xm)
     for (i in 1:n)
-        higlasso.out$beta[[i]] <- round(higlasso.out$beta[[i]], 9)
+        higlasso.out$beta[[i]] <- higlasso.out$beta[[i]]
     for (j in 1:n)
         for (i in 1:n)
-            higlasso.out$eta[[i, j]] <- round(higlasso.out$eta[[i, j]], 9)
+            higlasso.out$eta[[i, j]] <- higlasso.out$eta[[i, j]]
 
     higlasso.out$Y <- Y
     higlasso.out$Xm <- Xm

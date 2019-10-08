@@ -4,7 +4,7 @@
 using namespace arma;
 
 #define EPSILON 1e-10
-#define HALFMAX 100
+#define HALFMAX 20
 
 //' @useDynLib higlasso
 // [[Rcpp::export]]
@@ -33,34 +33,24 @@ arma::field <arma::mat> generate_Xi(arma::field <arma::mat> Xm)
     return Xi;
 }
 
-double penalized_likelihood(vec residuals, field <vec> beta, field <vec> eta,
-                                double sigma, double l1, double l2)
+field <vec> initalize_eta(field <vec> eta_init, uword s)
 {
-    double beta_reg = 0.0;
-    for (uword j = 0; j < beta.n_elem; ++j)
-        beta_reg += exp(-norm(beta(j), "inf") / sigma) * norm(beta(j));
+    uword i = 0;
+    field <vec> eta = field <vec> (s, s);
+    for (uword j$ = 0; j$ < s; ++j$)
+        for (uword j = 0; j < j$; ++j)
+            eta(j, j$) = eta_init(i++);
 
-    double eta_reg = 0.0;
-    for (uword k = 0; k < beta.n_elem; ++ k)
-        for (uword j = 0; j < k; ++j)
-            eta_reg += exp(-norm(eta(j, k), "inf") / sigma) * norm(eta(j, k));
-
-    return 0.5 * dot(residuals, residuals) + l1 * beta_reg + l2 * eta_reg;
+    return eta;
 }
 
-mat calculate_Xtj(mat Xmj, std::function <mat (uword, uword)> Xi, field <vec>
-                      beta, field <vec> eta, uword j)
+std::function <mat (uword, uword)> initalize_Xi(field <mat> &Xi_init, uword s)
 {
-    mat Xtj  = Xmj;
-    mat I_pj = eye <mat> (beta(j).n_elem, beta(j).n_elem);
-
-    for (uword k = 0; k < j; ++k)
-        Xtj += Xi(k, j) * diagmat(eta(k, j)) * kron(beta(k), I_pj);
-
-    for (uword l = j + 1; l < beta.n_elem; ++l)
-        Xtj += Xi(j, l) * diagmat(eta(j, l)) * kron(I_pj, beta(l));
-
-    return Xtj;
+    std::function <mat (uword, uword)> f = [s, &Xi_init] (uword j, uword k) ->
+        mat {
+            return Xi_init(j + s * k);
+        };
+    return f;
 }
 
 mat calculate_Xt(std::function <mat (uword, uword)> Xi, field <vec> beta)
@@ -80,20 +70,6 @@ mat calculate_Xt(std::function <mat (uword, uword)> Xi, field <vec> beta)
             p = p$;
         }
     return Xt;
-}
-
-vec calculate_Ytj(vec residuals, field <mat> Xm, std::function
-                      <mat (uword, uword)> Xi, field <vec> beta, field <vec>
-                      eta, uword j$)
-{
-    vec Ytj = residuals;
-    Ytj += Xm(j$) * beta(j$);
-    for (uword k = 0; k < beta.n_elem; ++k)
-        for (uword j = 0; j < k; ++j)
-            if (j$ == j || j$ == k)
-                Ytj += Xi(j, k) * (eta(j, k) % kron(beta(j), beta(k)));
-
-    return Ytj;
 }
 
 vec calculate_Yt(vec residuals, std::function <mat (uword, uword)> Xi,
@@ -128,28 +104,69 @@ vec calculate_D(vec v, double sigma)
     return D;
 }
 
-vec update_beta_j(mat Xtj, vec Ytj, vec beta_j, double l1, double sigma,
-                      double tol, int fast)
+void update_beta(vec &residuals, field <vec> &beta, field <vec> eta, field <mat>
+                     Xm, std::function <mat (uword, uword)> Xi, double l1,
+                     double sigma)
 {
-    int n = Ytj.n_elem;
-    vec D = calculate_D(beta_j, sigma);
-    vec C = (abs(D) - D) % beta_j;
+    //update beta
+    int n = residuals.n_elem;
+    for (uword j$ = 0; j$ < beta.n_elem; ++j$) {
+        mat Xtj  = Xm(j$);
+        vec Ytj = residuals + Xm(j$) * beta (j$);
 
-    mat M = Xtj.t() * Xtj +  n * l1 * diagmat(D);
+        mat I_pj = eye <mat> (beta(j$).n_elem, beta(j$).n_elem);
+        for (uword k = 0; k < j$; ++k) {
+            Xtj += Xi(k, j$) * diagmat(eta(k, j$)) * kron(beta(k), I_pj);
+            Ytj += Xi(k, j$) * (eta(k, j$) % kron(beta(k), beta(j$)));
+        }
+        for (uword l = j$ + 1; l < beta.n_elem; ++l) {
+            Xtj += Xi(j$, l) * diagmat(eta(j$, l)) * kron(I_pj, beta(l));
+            Ytj += Xi(j$, l) * (eta(j$, l) % kron(beta(j$), beta(l)));
+        }
 
+        vec D = calculate_D(beta(j$), sigma);
+        vec C = (abs(D) - D) % beta(j$);
 
-    if (fast) {
-        if (rcond(M) < tol)
-        Rcpp::warning("large condition number!\n");
-        return solve(M, Xtj.t() * Ytj + l1 * C, solve_opts::likely_sympd +
-                     solve_opts::fast);
+        mat M = Xtj.t() * Xtj +  n * l1 * diagmat(D);
+        vec new_beta = solve(M, Xtj.t() * Ytj + l1 * C);
+
+        vec Ytj_orig = Ytj;
+        auto ppen_lik = [&](double omega)
+        {
+            vec b = omega * new_beta + (1.0 - omega) * beta(j$);
+            double penlik = l1 * exp(-norm(b, "inf") / sigma) * norm(b);
+            Ytj = Ytj_orig - Xm(j$) * b;
+            for (uword k = 0; k < j$; ++k)
+                Ytj -= Xi(k, j$) * (eta(k, j$) % kron(beta(k), b));
+            for (uword l = j$ + 1; l < beta.n_elem; ++l)
+                Ytj -= Xi(j$, l) * (eta(j$, l) % kron(b, beta(l)));
+            return penlik += 0.5 * dot(Ytj, Ytj) / n;
+        };
+
+        double pen_zero = 0.5 * dot(Ytj, Ytj) / n;
+        double pen0     = ppen_lik(0.0);
+        double pen1     = ppen_lik(1.0);
+
+        int i = HALFMAX;
+        double omega = 1.0;
+        while (i-- && pen1 > pen0)
+            pen1 = ppen_lik(omega /= 2.0);
+
+        switch (index_min(vec({pen_zero, pen0, pen1}))) {
+        case 0:
+            beta(j$).fill(0.0);
+            residuals = Ytj_orig;
+            continue;
+        case 1:
+            continue;
+        case 2:
+            beta(j$) = omega * new_beta + (1.0 - omega) * beta(j$);
+            residuals = Ytj;
+        }
     }
-    else
-        return solve(M, Xtj.t() * Ytj + l1 * C);
 }
 
-field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma,
-                           double tol, int fast)
+field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma)
 {
     int n = Yt.n_elem;
 
@@ -169,16 +186,7 @@ field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma,
     //
     mat M = Xt.t() * Xt + n * l2 * diagmat(D);
 
-
-    if (fast) {
-        if (rcond(M) < tol)
-            Rcpp::warning("large condition number!\n");
-
-        e = solve(M, Xt.t() * Yt + l2 * C, solve_opts::likely_sympd +
-                      solve_opts::fast);
-    }
-    else
-        e = solve(M, Xt.t() * Yt + l2 * C);
+    e = solve(M, Xt.t() * Yt + l2 * C);
 
     p = 0;
     field <vec> new_eta = eta;
@@ -192,70 +200,12 @@ field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma,
     return new_eta;
 }
 
-field <vec> initalize_eta(field <vec> eta_init, uword s)
-{
-    uword i = 0;
-    field <vec> eta = field <vec> (s, s);
-    for (uword j$ = 0; j$ < s; ++j$)
-        for (uword j = 0; j < j$; ++j)
-            eta(j, j$) = eta_init(i++);
-
-    return eta;
-}
-
-std::function <mat (uword, uword)> initalize_Xi(field <mat> &Xi_init, uword s)
-{
-    std::function <mat (uword, uword)> f = [s, &Xi_init] (uword j, uword k) ->
-        mat {
-            return Xi_init(j + s * k);
-        };
-    return f;
-}
-
-void bls_beta(vec &Ytj, vec new_beta, field <vec> &beta, field <vec> eta,
-                  field <mat> Xm, std::function <mat (uword, uword)> Xi,
-                  uword j$, double l1, double sigma)
-{
-    vec Ytj_org = Ytj;
-    auto ppen_lik = [&](double omega)
-    {
-        vec b = omega * new_beta + (1.0 - omega) * beta(j$);
-
-        Ytj = Ytj_org;
-        Ytj -= Xm(j$) * b;
-        double beta_reg = 0.0;
-        for (uword k = 0; k < beta.n_elem; ++k) {
-            if (j$ == k)
-                beta_reg += exp(-norm(b, "inf") / sigma) * norm(b);
-            else
-                beta_reg += exp(-norm(beta(k), "inf") / sigma) * norm(beta(k));
-            for (uword j = 0; j < k; ++j) {
-                if (j$ == k)
-                    Ytj -= Xi(j, k) * (eta(j, k) % kron(beta(j), b));
-                if (j$ == j)
-                    Ytj -= Xi(j, k) * (eta(j, k) % kron(b, beta(k)));
-            }
-        }
-        return 0.5 * dot(Ytj, Ytj) + l1 * beta_reg;
-    };
-
-
-    int i = HALFMAX;
-    double pen0  = ppen_lik(0.0);
-    double omega = 1.0;
-    while (ppen_lik(omega) > pen0 && i--)
-        omega /= 2.0;
-
-
-    beta(j$) = omega * new_beta + (1.0 - omega) * beta(j$);
-
-}
-
 // performs backtracking line search for eta. Yt and eta are modified.
 void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
                  std::function <mat (uword, uword)> Xi, double l2, double sigma)
 {
     vec Yt_org = Yt;
+    int n = Yt.n_elem;
     auto ppen_lik = [&](double omega)
     {
         Yt = Yt_org;
@@ -267,18 +217,39 @@ void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
                 eta_reg += exp(-norm(e, "inf") / sigma) * norm(e);
             }
         }
-        return 0.5 * dot(Yt, Yt) + l2 * eta_reg;
+        return 0.5 * dot(Yt, Yt) / n + l2 * eta_reg;
     };
 
-    int i = HALFMAX;
-    double pen0  = ppen_lik(0.0);
+    double pen0 = ppen_lik(0.0);
+    double pen1 = ppen_lik(1.0);
     double omega = 1.0;
-    while (ppen_lik(omega) > pen0 && i--)
-        omega /= 2.0;
 
-    for (uword k = 0; k < beta.n_elem; ++k)
+    int i = HALFMAX;
+    while (i-- && pen1 > pen0)
+        pen1 = ppen_lik(omega /= 2.0);
+
+    if (pen1 > pen0)
+        Yt = Yt_org;
+    else
+        for (uword k = 0; k < beta.n_elem; ++k)
+            for (uword j = 0; j < k; ++j)
+                eta(j, k) = omega * new_eta(j, k) + (1.0 - omega) * eta(j, k);
+}
+
+double penalized_likelihood(vec residuals, field <vec> beta, field <vec> eta,
+                                double sigma, double l1, double l2)
+{
+    int n = residuals.n_elem;
+    double beta_reg = 0.0;
+    for (uword j = 0; j < beta.n_elem; ++j)
+        beta_reg += exp(-norm(beta(j), "inf") / sigma) * norm(beta(j));
+
+    double eta_reg = 0.0;
+    for (uword k = 0; k < beta.n_elem; ++ k)
         for (uword j = 0; j < k; ++j)
-            eta(j, k) = omega * new_eta(j, k) + (1.0 - omega) * eta(j, k);
+            eta_reg += exp(-norm(eta(j, k), "inf") / sigma) * norm(eta(j, k));
+
+    return 0.5 * dot(residuals, residuals) / n + l1 * beta_reg + l2 * eta_reg;
 }
 
 //' @useDynLib higlasso
@@ -288,8 +259,7 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
                                  arma::field <arma::mat> Xi_init, arma::mat Z,
                                  arma::field <arma::vec> beta, arma::field
                                  <arma::vec> eta_init, double l1, double l2,
-                                 double sigma, int maxit, double eps, double tol,
-                                 int fast)
+                                 double sigma, int maxit, double delta)
 {
     field <vec> eta = initalize_eta(eta_init, beta.n_elem);
     auto Xi = initalize_Xi(Xi_init, beta.n_elem);
@@ -320,32 +290,22 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
         residuals += Z * (alpha - new_alpha);
         alpha = new_alpha;
 
-        //update beta
-        for (uword j = 0; j < beta.n_elem; ++j) {
-            mat Xtj = calculate_Xtj(Xm(j), Xi, beta, eta, j);
-            vec Ytj = calculate_Ytj(residuals, Xm, Xi, beta, eta, j);
-            vec b   = update_beta_j(Xtj, Ytj, beta(j), l1, sigma, tol, fast);
-
-            bls_beta(Ytj, b, beta, eta, Xm, Xi, j, l1, sigma);
-
-            residuals = Ytj;
-        }
-
+        update_beta(residuals, beta, eta, Xm, Xi, l1, sigma);
         // update eta
         vec Yt = calculate_Yt(residuals, Xi, beta, eta);
         mat Xt = calculate_Xt(Xi, beta);
-        new_eta = update_eta(Xt, Yt, eta, l2, sigma, tol, fast);
+        new_eta = update_eta(Xt, Yt, eta, l2, sigma);
 
         bls_eta(Yt, new_eta, eta, beta, Xi, l2, sigma);
         residuals = Yt;
 
         pen_lik1 = penalized_likelihood(residuals, beta, eta, sigma, l1, l2);
         // check penalized likelihood
-    } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= eps);
+    } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= delta);
 
-    if (it >= maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= eps)
+    if (it >= maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= delta)
         Rcpp::warning("'maxit' reached without convergence: %f > %f\n",
-        (pen_lik0 - pen_lik1) / pen_lik0, eps);
+        (pen_lik0 - pen_lik1) / pen_lik0, delta);
 
     double mspe = dot(residuals, residuals) / (2.0 * residuals.n_elem);
     return Rcpp::List::create(Rcpp::Named("alpha") = alpha,

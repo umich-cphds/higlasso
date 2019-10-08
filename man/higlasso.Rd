@@ -5,8 +5,7 @@
 \title{Hierarchical Integrative Group LASSO}
 \usage{
 higlasso(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL, degree = 2,
-  maxit = 1000, eps = 1e-06, tol = .Machine$double.eps,
-  faster = FALSE)
+  maxit = 1000, delta = 1e-05)
 }
 \arguments{
 \item{Y}{A length n numeric response vector}
@@ -29,13 +28,7 @@ own groupings instead of a basis expansion}
 
 \item{maxit}{Maximum number of iterations. Default is 1000}
 
-\item{eps}{Numeric tolerance for convergence. Defaults to 1e-6}
-
-\item{tol}{Tolerance for RcppArmadillo solve. This is separate from \code{eps}.
-Default is machine epsilon}
-
-\item{faster}{If TRUE, higlasso will be faster, but possibly less accurate.
-Default is FALSE}
+\item{delta}{Numeric tolerance for convergence. Defaults to 1e-6}
 }
 \description{
 TODO
