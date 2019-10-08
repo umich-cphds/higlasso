@@ -1,6 +1,3 @@
----
-output: md_document
----
 # higlasso
 
 ## Installation
