@@ -112,7 +112,7 @@ void update_beta(vec &residuals, field <vec> &beta, field <vec> eta, field <mat>
     int n = residuals.n_elem;
     for (uword j$ = 0; j$ < beta.n_elem; ++j$) {
         mat Xtj  = Xm(j$);
-        vec Ytj = residuals + Xm(j$) * beta (j$);
+        vec Ytj = residuals + Xm(j$) * beta(j$);
 
         mat I_pj = eye <mat> (beta(j$).n_elem, beta(j$).n_elem);
         for (uword k = 0; k < j$; ++k) {
@@ -204,12 +204,14 @@ field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma)
 void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
                  std::function <mat (uword, uword)> Xi, double l2, double sigma)
 {
-    vec Yt_org = Yt;
     int n = Yt.n_elem;
+
+    vec Yt_org = Yt;
+    double eta_reg = 0.0;
     auto ppen_lik = [&](double omega)
     {
         Yt = Yt_org;
-        double eta_reg = 0.0;
+        eta_reg = 0.0;
         for (uword k = 0; k < beta.n_elem; ++k) {
             for (uword j = 0; j < k; ++j) {
                 vec e = omega * new_eta(j, k) + (1.0 - omega) * eta(j, k);
@@ -230,10 +232,18 @@ void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
 
     if (pen1 > pen0)
         Yt = Yt_org;
-    else
+    else {
         for (uword k = 0; k < beta.n_elem; ++k)
-            for (uword j = 0; j < k; ++j)
+            for (uword j = 0; j < k; ++j) {
                 eta(j, k) = omega * new_eta(j, k) + (1.0 - omega) * eta(j, k);
+                vec Ytz = Yt + Xi(j, k) * (eta(j, k) % kron(beta(j), beta(k)));
+                double pen_zero = dot(Ytz, Ytz) / (2.0 * n) + l2 * (eta_reg
+                                   - exp(-norm(eta(j, k), "inf") / sigma)
+                                     * norm(eta(j, k)));
+                if (pen_zero < pen1)
+                    eta(j, k).fill(0.0);
+            }
+    }
 }
 
 double penalized_likelihood(vec residuals, field <vec> beta, field <vec> eta,

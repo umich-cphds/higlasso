@@ -167,12 +167,6 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
 
     n <- length(Xm)
     names(higlasso.out$beta) <- names(Xm)
-    for (i in 1:n)
-        higlasso.out$beta[[i]] <- higlasso.out$beta[[i]]
-    for (j in 1:n)
-        for (i in 1:n)
-            higlasso.out$eta[[i, j]] <- higlasso.out$eta[[i, j]]
-
     higlasso.out$Y <- Y
     higlasso.out$Xm <- Xm
     higlasso.out$Xi <- Xi
