@@ -6,7 +6,7 @@ output: md_document
 ## Installation
 `higlasso` can be installed via Github using `devtools`
 
-```r
+```{r, eval = F}
 # install.packages("devtools")
 devtools::install_github("umich-cphds/higlasso")
 ```
@@ -14,7 +14,8 @@ You'll need a working C++11 compiler, which can obtained by installing Xcode on
 MacOS, and RTools on Windows.
 ## Example
 This is a very rough example on how to tune higlasso
- ```{r}
+
+```{r}
 system.time({
 library(higlasso)
 
