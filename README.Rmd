@@ -15,6 +15,7 @@ MacOS, and RTools on Windows.
 ## Example
 This is a very rough example on how to tune higlasso
  ```{r}
+system.time({
 library(higlasso)
 
 X <- higlasso.df[, paste0("X", 1:10)]
@@ -37,28 +38,25 @@ Z.train <- matrix(1, 400)
 Z.test  <- matrix(1, 100)
 
 
-l1 <- 1:10/10
-l2 <- 1:10/10
+l1 <- 1:10/5
+l2 <- 1:10/5
 
 best.mspe   <- 999
 best.lambda <- c(999, 999)
 
 for (lambda1 in l1) {
     for (lambda2 in l2) {
-
-        higlasso.out <- higlasso(Y.train, Z = Z.train,
-            Xm = Xm.train, lambda1 = lambda1, lambda2 = lambda2,
-            maxit = 10000)
+        higlasso.out <- higlasso(Y.train, Z = Z.train, Xm = Xm.train,
+                                 lambda1 = lambda1, lambda2 = lambda2, maxit  = 5000)
         mspe.test <- predict(higlasso.out, list(Y.test, Xm.test, Z.test))
         if (mspe.test < best.mspe) {
             best.mspe <- mspe.test
             best.lambda = c(lambda1, lambda2)
         }
-
     }
 }
-
 best <- higlasso(Y.train, Z = Z.train, Xm = Xm.train,
-    lambda1 = best.lambda[1], lambda2 = best.lambda[2])
+    lambda1 = best.lambda[1], lambda2 = best.lambda[2], sigma = 1)
+})
 best
 ```
