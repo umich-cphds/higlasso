@@ -238,12 +238,17 @@ void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
                 eta(j, k) = omega * new_eta(j, k) + (1.0 - omega) * eta(j, k);
                 vec Ytz = Yt + Xi(j, k) * (eta(j, k) % kron(beta(j), beta(k)));
                 double pen_zero = dot(Ytz, Ytz) / (2.0 * n) + l2 * (eta_reg
-                                   - exp(-norm(eta(j, k), "inf") / sigma)
-                                     * norm(eta(j, k)));
+                                  - exp(-norm(eta(j, k), "inf") / sigma)
+                                  * norm(eta(j, k)));
                 if (pen_zero < pen1)
                     eta(j, k).fill(0.0);
             }
     }
+    for (uword k = 0; k < beta.n_elem; ++k)
+        for (uword j = 0; j < k; ++j) {
+            if (norm(beta(j)) < DBL_EPSILON || norm(beta(k)) < DBL_EPSILON || norm(eta(j, k)) < DBL_EPSILON)
+                eta(j, k).fill(0.0);
+        }
 }
 
 double penalized_likelihood(vec residuals, field <vec> beta, field <vec> eta,
