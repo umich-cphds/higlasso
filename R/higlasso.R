@@ -242,27 +242,25 @@ predict.higlasso <- function(object, newdata, ...)
     if (!missing(newdata)) {
         if (!is.list(newdata) || length(newdata) != 3)
             stop("'newdata' should be a length 3 list.")
-        Y  <- newdata[[1]]
         Xm <- newdata[[2]]
         Xi <- generate_Xi(Xm)
         Z  <- newdata[[3]]
     }
     else {
-        Y <- object$Y
         Xm  <- object$Xm
         Xi  <- object$Xi
         Z <- object$Z
     }
-    res <- Y - Z %*% object$alpha
+    Y.hat  <- Z %*% object$alpha
     for (i in 1:n.groups)
-        res <- res - (Xm[[i]] %*% beta[[i]])
+        Y.hat <- Y.hat + (Xm[[i]] %*% beta[[i]])
 
     for (j in 1:n.groups)
         for (i in 1:n.groups) {
             if (nrow(eta[[i, j]]) > 0) {
                 e <- eta[[i, j]] * kronecker(beta[[i]], beta[[j]])
-                res <- res - Xi[[i, j]] %*% e
+                Y.hat <- Y.hat + Xi[[i, j]] %*% e
             }
         }
-    0.5 * mean(res * res)
+    Y.hat
 }
