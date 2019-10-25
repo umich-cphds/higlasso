@@ -240,11 +240,11 @@ predict.higlasso <- function(object, newdata, ...)
     eta  <- object$eta
 
     if (!missing(newdata)) {
-        if (!is.list(newdata) || length(newdata) != 3)
+        if (!is.list(newdata) || length(newdata) != 2)
             stop("'newdata' should be a length 3 list.")
-        Xm <- newdata[[2]]
+        Xm <- newdata[[1]]
         Xi <- generate_Xi(Xm)
-        Z  <- newdata[[3]]
+        Z  <- newdata[[2]]
     }
     else {
         Xm  <- object$Xm
