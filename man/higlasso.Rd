@@ -4,16 +4,12 @@
 \alias{higlasso}
 \title{Hierarchical Integrative Group LASSO}
 \usage{
-higlasso(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL, degree = 2,
-  maxit = 1000, delta = 1e-05)
+higlasso(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
+  Z.test = NULL, lambda1 = NULL, lambda2 = NULL, n.lambda1 = 10,
+  n.lambda2 = 10, lambda.min.ratio = 0.01, sigma = 1, degree = 3,
+  maxit = 1000, delta = 1e-05, groups = NULL)
 }
 \arguments{
-\item{Y}{A length n numeric response vector}
-
-\item{X}{A n x p numeric matrix}
-
-\item{Z}{A n x m numeric matrix}
-
 \item{lambda1}{Penalty for main effects}
 
 \item{lambda2}{Penalty for interaction effects}
@@ -21,14 +17,20 @@ higlasso(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL, degree = 2,
 \item{sigma}{Scale parameter for Integrative weights. Technically a third
 tuning paramter but defaults to 1 for computational tractibility}
 
-\item{Xm}{An optional list of design matrices if the user wishes to use their
-own groupings instead of a basis expansion}
-
 \item{degree}{Degree of \code{bs} basis expansion. Default is 2}
 
 \item{maxit}{Maximum number of iterations. Default is 1000}
 
 \item{delta}{Numeric tolerance for convergence. Defaults to 1e-6}
+
+\item{Y}{A length n numeric response vector}
+
+\item{X}{A n x p numeric matrix}
+
+\item{Z}{A n x m numeric matrix}
+
+\item{Xm}{An optional list of design matrices if the user wishes to use their
+own groupings instead of a basis expansion}
 }
 \description{
 TODO

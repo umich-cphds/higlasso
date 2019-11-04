@@ -20,63 +20,65 @@
 #'     tuning paramter but defaults to 1 for computational tractibility
 #' @param Xm An optional list of design matrices if the user wishes to use their
 #'     own groupings instead of a basis expansion
-#' @param degree Degree of \code{bs} basis expansion. Default is 2
+#' @param degree Degree of \code{bs} basis expansion. Default is 3
 #' @param maxit Maximum number of iterations. Default is 1000
-#' @param delta Numeric tolerance for convergence. Defaults to 1e-6
+#' @param delta Numeric tolerance for convergence. Defaults to 1e-5
 #' @examples TODO
 #' @author Alexander Rix
 #' @export
-higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
-                         degree = 2, maxit = 1000, delta = 1e-5)
+higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
+                        Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
+                        n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .01,
+                        sigma = 1, degree = 3, maxit = 1000, delta = 1e-5,
+                        groups = NULL)
 {
-    if (!is.vector(Y) || !is.numeric(Y))
-        stop("'Y' must be a numeric vector.")
-    if (any(is.na(Y)))
-        stop("'Y' cannot contain missing values.")
+    if (!is.vector(Y.train) || !is.numeric(Y.train))
+        stop("'Y.train' must be a numeric vector.")
+    if (any(is.na(Y.train)))
+        stop("'Y.train' cannot contain missing values.")
 
-    # We need to check to see if Xm is null first incase the user wanted to
-    # specify their own groups. In that case X is missing so we don't want to
-    # refer to it.
-    if (!is.null(Xm)) {
-        if (!is.list(Xm))
-            stop("'Xm' must be a list.")
-
-        lapply(1:length(Xm), function(i)
-        {
-            if (!is.matrix(Xm[[i]]) || !is.numeric(Xm[[i]]))
-                stop(paste0("'Xm[[", i, "]]' must be a numeric vector."))
-            if (nrow(Xm[[i]]) != length(Y))
-                stop(paste0("The number of rows of 'Xm[[", i,
-                            "]]' does not match the length of 'Y'."))
-            if (any(is.na(Xm[[i]])))
-                stop(paste0("'Xm[[", i, "]]' cannot contain missing values."))
-        })
-    }
-    else {
-        if (!is.matrix(X) || !is.numeric(X))
-            stop("'X' must be a numeric vector.")
-        if (nrow(X) != length(Y))
-            stop("The number of rows of 'X' does not match the length of 'Y'.")
-        if (any(is.na(X)))
-            stop("'X' cannot contain missing values.")
+    if (!is.null(Y.test)) {
+        if (!is.vector(Y.test) || !is.numeric(Y.test))
+            stop("'Y.test' must be a numeric vector.")
+        if (any(is.na(Y.test)))
+            stop("'Y.test' cannot contain missing values.")
     }
 
-    if (!is.matrix(Z) || !is.numeric(Z))
-        stop("'Z' must be a numeric vector.")
-    if (nrow(Z) != length(Y))
-        stop("The number of rows of 'Z' does not match the length of 'Y'.")
-    if (any(is.na(Z)))
-        stop("'Z' cannot contain missing values.")
+    if (!is.matrix(X.train) || !is.numeric(X.train))
+        stop("'X.train' must be a numeric vector.")
+    if (nrow(X.train) != length(Y.train))
+        stop("The number of rows of 'X.train' does not match the length of 'Y.train'.")
+    if (any(is.na(X.train)))
+        stop("'X.train' cannot contain missing values.")
 
-    if (!is.numeric(lambda1) || lambda1 < 0)
-        stop("'lambda1' must be a nonnegative number.")
-    if (length(lambda1) > 1)
-        stop("'lambda1' must have unit length.")
+    if (!is.null(X.test)) {
+        if (!is.matrix(X.test) || !is.numeric(X.test))
+            stop("'X.test' must be a numeric vector.")
+        if (nrow(X.test) != length(Y.test))
+            stop("The number of rows of 'X.test' does not match the length of 'Y.test'.")
+        if (ncol(X.test) != ncol(X.train))
+            stop("'X.test' does not have the same number of columns as 'X.train'.")
+        if (any(is.na(X.test)))
+            stop("'X.test' cannot contain missing values.")
+    }
 
-    if (!is.numeric(lambda2) || lambda2 < 0)
-        stop("'lambda2' must be a nonnegative number.")
-    if (length(lambda2) > 1)
-        stop("'lambda2' must have unit length.")
+    if (!is.matrix(Z.train) || !is.numeric(Z.train))
+        stop("'Z.train' must be a numeric vector.")
+    if (nrow(Z.train) != length(Y.train))
+        stop("The number of rows of 'Z.train' does not match the length of 'Y.train'.")
+    if (any(is.na(Z.train)))
+        stop("'Z.train' cannot contain missing values.")
+
+    if (!is.null(Z.test)) {
+        if (!is.matrix(Z.test) || !is.numeric(Z.test))
+            stop("'Z.test' must be a numeric vector.")
+        if (nrow(Z.test) != length(Y.test))
+            stop("The number of rows of 'Z.test' does not match the length of 'Y.test'.")
+        if (ncol(Z.test) != ncol(Z.train))
+            stop("'Z.test' does not have the same number of columns as 'Z.train'.")
+        if (any(is.na(Z.test)))
+            stop("'Z.test' cannot contain missing values.")
+    }
 
     if (!is.numeric(sigma) || sigma < 0)
         stop("'sigma' must be a nonnegative number.")
@@ -92,90 +94,124 @@ higlasso <- function(Y, X, Z, lambda1, lambda2, sigma = 1, Xm = NULL,
     if (!is.numeric(delta) || delta <= 0)
         stop("'delta' should be a postive number.")
 
-    if (is.null(Xm)) {
-        generate.Xm <- function(i)
-        {
-            m <- splines::bs(X[, i], degree = degree)
-            m <- qr.Q(qr(m))
-            apply(m, 2, function(x) x / stats::sd(x))
-        }
-
-        Xm <- lapply(1:ncol(X), generate.Xm)
-        if (is.null(colnames(X)))
-            colnames(X) <- 1:ncol(X)
-        names(Xm) <- paste0("bs(", colnames(X), ")")
+    generate.Xm <- function(i)
+    {
+        m <- splines::bs(c(X.train[, i], X.test[, i]), degree = degree)
+        m <- qr.Q(qr(m))
+        apply(m, 2, function(x) x / stats::sd(x))
     }
+
+    Xm <- lapply(1:ncol(X.train), generate.Xm)
+
+    if (is.null(colnames(X.train)))
+        colnames(X.train) <- 1:ncol(X.train)
+    names(Xm) <- colnames(X.train)
+
     if (is.null(names(Xm)))
         names(Xm) <- paste0("G", 1:length(Xm))
 
-    Xi <- generate_Xi(Xm)
+    Xm.train <- lapply(Xm, function(x) x[1:nrow(X.train), ])
+    Xm.test  <- lapply(Xm, function(x) x[-(1:nrow(X.train)), ])
+    Xi.train <- generate_Xi(Xm.train)
+    Xi.test <- generate_Xi(Xm.test)
 
-    X.init <- do.call("cbind", Xm)
-    higlasso.groups <- lapply(1:length(Xm), function(i) rep(i, ncol(Xm[[i]])))
-    n.groups <- length(Xm)
-    n <- length(Xm)
+    X.init <- do.call("cbind", Xm.train)
+
+    n.main <- ncol(X.init)
+
+    higlasso.groups <- lapply(1:length(Xm.train), function(i) rep(i, ncol(Xm.train[[i]])))
+    n.groups <- length(Xm.train)
+    n <- length(Xm.train)
     for (j in 1:n.groups) {
         for (i in 1:n.groups) {
-            p <- ncol(Xi[[i, j]])
+            p <- ncol(Xi.train[[i, j]])
             if (p > 0) {
-                X.init <- cbind(X.init, Xi[[i, j]])
+                X.init <- cbind(X.init, Xi.train[[i, j]])
                 n <- n + 1
                 higlasso.groups[[n]] <- rep(n, p)
             }
         }
     }
 
-    nx      <- ncol(X.init)
-    X.init  <- cbind(X.init, Z)
-    weights <- c(rep(1, nx), rep(0, ncol(Z)))
+    # generate lambda1/2 sequences if user does not pre-specify them
+    if (!is.null(lambda1)) {
+        if (!is.numeric(lambda1) || any(lambda1 <= 0))
+            stop("'lambda1' must be a nonnegative numeric array.")
+    } else {
+        lambda1.max <- max(abs(Y.train %*% X.init[, 1:n.main]) / nrow(X.init))
+        lambda1.min <- lambda.min.ratio * lambda1.max
+        lambda1 <- exp(seq(log(lambda1.max), log(lambda1.min), length.out =
+                           n.lambda1))
+    }
 
-    e.net <- gcdnet::gcdnet(X.init, Y, method = "ls", lambda2 = lambda2,
-                                pf = weights, pf2 = weights, eps = delta,
-                                maxit = max(maxit, 1e6))
+    if (!is.null(lambda2)) {
+        if (!is.numeric(lambda2) || any(lambda2 <= 0))
+            stop("'lambda2' must be a nonnegative numeric array.")
+    } else {
+        lambda2.max <- max(abs(Y.train %*% X.init[, -(1:n.main)]) / nrow(X.init))
+        lambda2.min <- lambda.min.ratio * lambda2.max
+        lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min),
+                           length.out = n.lambda2))
+    }
 
-    if (e.net$jerr != 0)
-        stop("Error in gcdnet::gcdnet.")
-
-    # get the best scoring lambda from gcdnet and use that to generate inital
-    # weights for the adpative elastic net
-    mse <- function(p) mean((p - Y)^2)
-    i <- which.min(apply(stats::predict(e.net, X.init), 2, mse))
-
-    ada.e.weights <- 1 / (e.net$beta[1:nx, i] + 1 / nrow(X.init))
-    ada.e.weights <- c(ada.e.weights, rep(0, ncol(Z)))
-
-
-    ada.e.net <- gcdnet::gcdnet(X.init, Y, method = "ls", lambda = lambda1,
-                                    lambda2 = lambda2, pf = ada.e.weights,
-                                    eps = delta, maxit = max(maxit, 1e6))
-
-    coefs <- ada.e.net$beta[1:nx]
-
-    n <- 1
-    higlasso.coefs <- lapply(1:length(higlasso.groups), function(i)
+    nx  <- ncol(X.init)
+    X.init  <- cbind(X.init, Z.train)
+    weights <- c(rep(1, nx), rep(0, ncol(Z.train)))
+    out <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
     {
-        j <- length(higlasso.groups[[i]])
-        ret <- coefs[n:(n + j - 1)]
-        n <<- n + j
-        ret
-    })
+        e.net <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
+                                lambda[[2]], pf = weights, pf2 = weights,
+                                eps = delta, maxit = max(maxit, 1e6))
 
-    beta <- higlasso.coefs[1:length(Xm)]
-    eta  <- higlasso.coefs[-(1:length(Xm))]
-    higlasso.out <- higlasso_internal(Y, Xm, Xi, Z, beta, eta, lambda1, lambda2,
+        if (e.net$jerr != 0)
+            stop("Error in gcdnet::gcdnet.")
+
+        # get the best scoring lambda from gcdnet and use that to generate
+        # inital weights for the adpative elastic net
+        mse <- function(p) mean((p - Y.train) ^ 2)
+        i <- which.min(apply(stats::predict(e.net, X.init), 2, mse))
+
+        ae.weights <- 1 / (e.net$beta[1:nx, i] + 1 / nrow(X.init))
+        ae.weights <- c(ae.weights, rep(0, ncol(Z.train)))
+        ae.net <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda =
+                                 lambda[[1]], lambda2 = lambda[[2]], pf =
+                                 ae.weights, eps = delta, maxit = max(maxit, 1e6))
+
+        if (e.net$jerr != 0)
+            stop("Error in gcdnet::gcdnet.")
+
+        coefs <- ae.net$beta[1:nx]
+
+        n <- 1
+        higlasso.coefs <- lapply(1:length(higlasso.groups), function(i)
+        {
+            j <- length(higlasso.groups[[i]])
+            ret <- coefs[n:(n + j - 1)]
+            n <<- n + j
+            ret
+        })
+        beta <- higlasso.coefs[1:length(Xm.train)]
+        eta  <- higlasso.coefs[-(1:length(Xm))]
+        higlasso.out <- higlasso_internal(Y.train, Xm.train, Xi.train, Z.train,
+                                          beta, eta, lambda[[1]], lambda[[2]],
                                           sigma, maxit, delta)
 
-    n <- length(Xm)
-    names(higlasso.out$beta) <- names(Xm)
-    higlasso.out$Y <- Y
-    higlasso.out$Xm <- Xm
-    higlasso.out$Xi <- Xi
-    higlasso.out$Z <- Z
-    higlasso.out$degree <- degree
-    higlasso.out$lambda <- c(lambda1, lambda2)
+        names(higlasso.out$beta) <- names(Xm)
 
-    class(higlasso.out) <- "higlasso"
-    higlasso.out
+        higlasso.out$degree <- degree
+        higlasso.out$lambda <- c(lambda[[1]], lambda[[2]])
+
+        class(higlasso.out) <- "higlasso"
+        higlasso.out
+    })
+    if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
+        print("ok")
+        Yhats <- purrr::map(out, predict, newdata = list(Xm.test, Z.test))
+        i <- which.min(purrr::map_dbl(Yhats, ~ mean((.x - Y.test)^2)))
+        out[[i]]
+    } else {
+        out
+    }
 }
 
 #' Print higlasso fits
@@ -210,7 +246,7 @@ summary.higlasso <- function(object, ...)
         stop("'object' is not a higlasso fit.")
 
     main <- sapply(object$beta, function(b) ifelse(any(b != 0), 1, 0))
-    n <- length(object$Xm)
+    n <- length(object$beta)
     inter <- matrix(NA, n, n)
     for (j in 1:n)
         for (i in 1:n)
@@ -235,7 +271,7 @@ predict.higlasso <- function(object, newdata, ...)
 {
     if (class(object) != "higlasso")
         stop("'object' is not a higlasso fit.")
-    n.groups <- length(object$Xm)
+    n <- length(object$beta)
     beta <- object$beta
     eta  <- object$eta
 
@@ -252,11 +288,11 @@ predict.higlasso <- function(object, newdata, ...)
         Z <- object$Z
     }
     Y.hat  <- Z %*% object$alpha
-    for (i in 1:n.groups)
+    for (i in 1:n)
         Y.hat <- Y.hat + (Xm[[i]] %*% beta[[i]])
 
-    for (j in 1:n.groups)
-        for (i in 1:n.groups) {
+    for (j in 1:n)
+        for (i in 1:n) {
             if (nrow(eta[[i, j]]) > 0) {
                 e <- eta[[i, j]] * kronecker(beta[[i]], beta[[j]])
                 Y.hat <- Y.hat + Xi[[i, j]] %*% e
