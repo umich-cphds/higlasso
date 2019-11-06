@@ -127,8 +127,10 @@ void update_beta(vec &residuals, field <vec> &beta, field <vec> eta, field <mat>
         vec D = calculate_D(beta(j$), sigma);
         vec C = (abs(D) - D) % beta(j$);
 
+        vec new_beta;
         mat M = Xtj.t() * Xtj +  n * l1 * diagmat(D);
-        vec new_beta = solve(M, Xtj.t() * Ytj + l1 * C);
+        if (!solve(new_beta, M, Xtj.t() * Ytj + l1 * C))
+            Rcpp::error("Armadillo solve() failed.\n");
 
         vec Ytj_orig = Ytj;
         auto ppen_lik = [&](double omega)
@@ -181,12 +183,10 @@ field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma)
             p = p$;
         }
     }
+
     vec C = (abs(D) - D) % e;
-
-    //
-    mat M = Xt.t() * Xt + n * l2 * diagmat(D);
-
-    e = solve(M, Xt.t() * Yt + l2 * C);
+    if (!solve(e, Xt.t() * Xt + n * l2 * diagmat(D), Xt.t() * Yt + l2 * C))
+        Rcpp::error("Armadillo solve() failed.\n");
 
     p = 0;
     field <vec> new_eta = eta;
