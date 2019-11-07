@@ -37,7 +37,7 @@
 higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
                         Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
                         n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .01,
-                        sigma = 1, degree = 3, maxit = 2000, delta = 1e-5)
+                        sigma = 1, degree = 3, maxit = 5000, delta = 1e-5)
 {
     if (!is.vector(Y.train) || !is.numeric(Y.train))
         stop("'Y.train' must be a numeric vector.")
