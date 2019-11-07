@@ -11,26 +11,33 @@
 #'   \item Induce sparsity for variable selection while respecting group
 #'       structure (group LASSO).
 #' }
-#' @param Y A length n numeric response vector
-#' @param X A n x p numeric matrix
-#' @param Z A n x m numeric matrix
-#' @param lambda1 Penalty for main effects
+#' @param Y.train A length n numeric response vector. Training set
+#' @param X.train A n x p numeric matrix. Training set
+#' @param Z.train A n x m numeric matrix. Training set
+#' @param Y.test A length n' numeric response vector
+#' @param X.test A n' x p numeric matrix. Test set
+#' @param Z.test A n' x m numeric matrix. Test set
+#' @param lambda1 A numeric vector of main effect penalty tuning parameters. By
+#'     default, \code{lambda1 = NULL} and generates a sequence (length
+#'     \code{n.lambda1}) of lambda1s based off of the data and
+#'     \code{min.lambda.ratio}.
 #' @param lambda2 Penalty for interaction effects
-#' @param sigma Scale parameter for Integrative weights. Technically a third
-#'     tuning paramter but defaults to 1 for computational tractibility
-#' @param Xm An optional list of design matrices if the user wishes to use their
-#'     own groupings instead of a basis expansion
+#' @param n.lambda1 Number that determines the length of the higlasso generated
+#'     \code{lambda1} sequence.
+#' @param n.lambda2 Penalty for interaction effects
+#' @param lambda.min.ratio ratio that determines min lambda from max lambda.
+#' @param sigma Scale parameter for integrative weights. Technically a third
+#'     tuning parameter but defaults to 1 for computational tractibility
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
-#' @param maxit Maximum number of iterations. Default is 1000
-#' @param delta Numeric tolerance for convergence. Defaults to 1e-5
+#' @param maxit Maximum number of iterations. Default is 2000
+#' @param delta Tolerance for convergence. Defaults to 1e-5
 #' @examples TODO
 #' @author Alexander Rix
 #' @export
 higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
                         Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
                         n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .01,
-                        sigma = 1, degree = 3, maxit = 1000, delta = 1e-5,
-                        groups = NULL)
+                        sigma = 1, degree = 3, maxit = 2000, delta = 1e-5)
 {
     if (!is.vector(Y.train) || !is.numeric(Y.train))
         stop("'Y.train' must be a numeric vector.")
@@ -205,7 +212,6 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         higlasso.out
     })
     if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
-        print("ok")
         Yhats <- purrr::map(out, predict, newdata = list(Xm.test, Z.test))
         i <- which.min(purrr::map_dbl(Yhats, ~ mean((.x - Y.test)^2)))
         out[[i]]

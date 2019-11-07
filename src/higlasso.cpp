@@ -185,8 +185,10 @@ field <vec> update_eta(mat Xt, vec Yt, field <vec> eta, double l2, double sigma)
     }
 
     vec C = (abs(D) - D) % e;
-    if (!solve(e, Xt.t() * Xt + n * l2 * diagmat(D), Xt.t() * Yt + l2 * C))
+    if (!solve(e, Xt.t() * Xt + n * l2 * diagmat(D), Xt.t() * Yt + l2 * C)) {
         Rcpp::warning("Armadillo solve() failed.\n");
+        return eta;
+    }
 
     p = 0;
     field <vec> new_eta = eta;
