@@ -4,7 +4,7 @@
 using namespace arma;
 
 #define EPSILON 1e-10
-#define HALFMAX 20
+#define HALFMAX 25
 
 //' @useDynLib higlasso
 // [[Rcpp::export]]
