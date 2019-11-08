@@ -36,7 +36,7 @@
 #' @export
 higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
                         Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
-                        n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .01,
+                        n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .1,
                         sigma = 1, degree = 3, maxit = 5000, delta = 1e-5)
 {
     if (!is.vector(Y.train) || !is.numeric(Y.train))
@@ -149,6 +149,7 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         lambda1.min <- lambda.min.ratio * lambda1.max
         lambda1 <- exp(seq(log(lambda1.max), log(lambda1.min), length.out =
                            n.lambda1))
+        # lambda1 <- seq(lambda1.max, lambda1.min, length.out = n.lambda1)
     }
 
     if (!is.null(lambda2)) {
@@ -159,6 +160,7 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         lambda2.min <- lambda.min.ratio * lambda2.max
         lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min),
                            length.out = n.lambda2))
+        # lambda2 <- seq(lambda2.max, lambda2.min, length.out = n.lambda2)
     }
 
     nx  <- ncol(X.init)
