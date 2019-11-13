@@ -214,9 +214,10 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         higlasso.out
     })
     if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
-        Yhats <- purrr::map(out, predict, newdata = list(Xm.test, Z.test))
-        i <- which.min(purrr::map_dbl(Yhats, ~ mean((.x - Y.test)^2)))
-        out[[i]]
+        predictions <- purrr::map(out, predict, newdata = list(Xm.test, Z.test))
+        mse <- purrr::map_dbl(Yhats, ~ mean((.x - Y.test)^2)))
+
+        purrr::map2(mse, out, ~ list(.x,.y))
     } else {
         out
     }
