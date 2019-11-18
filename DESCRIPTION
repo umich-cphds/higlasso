@@ -1,11 +1,17 @@
 Package: higlasso
 Title: Hierarchical Integrative Group LASSO
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
-    person(given = "Alexander",
-           family = "Rix",
-           role = c("aut", "cre"),
-           email = "alexrix@umich.edu")
+    c(
+        person(given = "Alexander",
+               family = "Rix",
+               role = c("aut", "cre"),
+               email = "alexrix@umich.edu"),
+        person(given = "Jonathan",
+               family = "Boss",
+               role = c("aut"),
+                  email = "bossjona@umich.edu")
+    )
 Description:
     Environmental health studies are increasingly measuring multiple pollutants
     to  characterize the joint health effects attributable to exposure mixtures.

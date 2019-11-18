@@ -6,36 +6,53 @@
 \usage{
 higlasso(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
   Z.test = NULL, lambda1 = NULL, lambda2 = NULL, n.lambda1 = 10,
-  n.lambda2 = 10, lambda.min.ratio = 0.01, sigma = 1, degree = 3,
-  maxit = 1000, delta = 1e-05, groups = NULL)
+  n.lambda2 = 10, lambda.min.ratio = 0.1, sigma = 1, degree = 3,
+  maxit = 5000, delta = 1e-05)
 }
 \arguments{
-\item{lambda1}{Penalty for main effects}
+\item{Y.train}{A length n numeric response vector.}
+
+\item{X.train}{A n x p numeric matrix.}
+
+\item{Z.train}{A n x m numeric matrix for unregularized covariates.}
+
+\item{Y.test}{Optional length n' numeric response vector}
+
+\item{X.test}{Optional n' x p numeric matrix}
+
+\item{Z.test}{Optional A n' x m numeric matrix}
+
+\item{lambda1}{A numeric vector of main effect penalty tuning parameters. By
+default, \code{lambda1 = NULL} and generates a sequence (length
+\code{n.lambda1}) of lambda1s based off of the data and
+\code{min.lambda.ratio}.}
 
 \item{lambda2}{Penalty for interaction effects}
 
-\item{sigma}{Scale parameter for Integrative weights. Technically a third
-tuning paramter but defaults to 1 for computational tractibility}
+\item{n.lambda1}{Number that determines the length of the higlasso generated
+\code{lambda1} sequence.}
 
-\item{degree}{Degree of \code{bs} basis expansion. Default is 2}
+\item{n.lambda2}{Penalty for interaction effects}
 
-\item{maxit}{Maximum number of iterations. Default is 1000}
+\item{lambda.min.ratio}{ratio that determines min lambda from max lambda.
+Default is 0.1}
 
-\item{delta}{Numeric tolerance for convergence. Defaults to 1e-6}
+\item{sigma}{Scale parameter for integrative weights. Technically a third
+tuning parameter but defaults to 1 for computational tractibility}
 
-\item{Y}{A length n numeric response vector}
+\item{degree}{Degree of \code{bs} basis expansion. Default is 3}
 
-\item{X}{A n x p numeric matrix}
+\item{maxit}{Maximum number of iterations. Default is 2000}
 
-\item{Z}{A n x m numeric matrix}
-
-\item{Xm}{An optional list of design matrices if the user wishes to use their
-own groupings instead of a basis expansion}
+\item{delta}{Tolerance for convergence. Defaults to 1e-5}
 }
-\description{
+\value{
 TODO
 }
-\details{
+\description{
+HiGLASSO is a regularization method designed to detect non linear
+interactions between variables, particulary exposurees in environmental
+health studies.
 We have designed \code{higlasso} to
 \itemize{
 \item Impose strong heredity constraints on two-way interaction effects
@@ -46,8 +63,26 @@ coefficient estimates.
 structure (group LASSO).
 }
 }
-\examples{
+\details{
 TODO
+}
+\examples{
+library(higlasso)
+
+X <- higlasso.df[, paste0("X", 1:10)]
+Y <- higlasso.df$y
+
+Y.train <- Y[1:400]
+X.train <- as.matrix(X[1:400,])
+Z.train <- matrix(1, 400)
+
+X.test <- as.matrix(X[401:500,])
+Y.test  <- Y[401:500]
+Z.test  <- matrix(1, 100)
+\dontrun{
+higlass.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
+                        X.test = X.test, Z.test = Z.test)
+}
 }
 \author{
 Alexander Rix

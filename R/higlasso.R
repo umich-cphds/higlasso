@@ -1,7 +1,8 @@
 #' Hierarchical Integrative Group LASSO
 #'
-#' TODO
-#'
+#' HiGLASSO is a regularization method designed to detect non linear
+#' interactions between variables, particulary exposurees in environmental
+#' health studies.
 #' We have designed \code{higlasso} to
 #' \itemize{
 #'   \item Impose strong heredity constraints on two-way interaction effects
@@ -11,12 +12,14 @@
 #'   \item Induce sparsity for variable selection while respecting group
 #'       structure (group LASSO).
 #' }
-#' @param Y.train A length n numeric response vector. Training set
-#' @param X.train A n x p numeric matrix. Training set
-#' @param Z.train A n x m numeric matrix. Training set
-#' @param Y.test A length n' numeric response vector
-#' @param X.test A n' x p numeric matrix. Test set
-#' @param Z.test A n' x m numeric matrix. Test set
+#'
+#' TODO
+#' @param Y.train A length n numeric response vector.
+#' @param X.train A n x p numeric matrix.
+#' @param Z.train A n x m numeric matrix for unregularized covariates.
+#' @param Y.test Optional length n' numeric response vector
+#' @param X.test Optional n' x p numeric matrix
+#' @param Z.test Optional A n' x m numeric matrix
 #' @param lambda1 A numeric vector of main effect penalty tuning parameters. By
 #'     default, \code{lambda1 = NULL} and generates a sequence (length
 #'     \code{n.lambda1}) of lambda1s based off of the data and
@@ -26,12 +29,30 @@
 #'     \code{lambda1} sequence.
 #' @param n.lambda2 Penalty for interaction effects
 #' @param lambda.min.ratio ratio that determines min lambda from max lambda.
+#'     Default is 0.1
 #' @param sigma Scale parameter for integrative weights. Technically a third
 #'     tuning parameter but defaults to 1 for computational tractibility
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
 #' @param maxit Maximum number of iterations. Default is 2000
 #' @param delta Tolerance for convergence. Defaults to 1e-5
-#' @examples TODO
+#' @return TODO
+#' @examples
+#' library(higlasso)
+#'
+#' X <- higlasso.df[, paste0("X", 1:10)]
+#' Y <- higlasso.df$y
+#'
+#' Y.train <- Y[1:400]
+#' X.train <- as.matrix(X[1:400,])
+#' Z.train <- matrix(1, 400)
+#'
+#' X.test <- as.matrix(X[401:500,])
+#' Y.test  <- Y[401:500]
+#' Z.test  <- matrix(1, 100)
+#' \dontrun{
+#' higlass.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
+#'                         X.test = X.test, Z.test = Z.test)
+#' }
 #' @author Alexander Rix
 #' @export
 higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
@@ -120,7 +141,7 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     Xm.train <- lapply(Xm, function(x) x[1:nrow(X.train), ])
     Xm.test  <- lapply(Xm, function(x) x[-(1:nrow(X.train)), ])
     Xi.train <- generate_Xi(Xm.train)
-    Xi.test <- generate_Xi(Xm.test)
+    Xi.test  <- generate_Xi(Xm.test)
 
     X.init <- do.call("cbind", Xm.train)
 
@@ -147,9 +168,8 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     } else {
         lambda1.max <- max(abs(Y.train %*% X.init[, 1:n.main]) / nrow(X.init))
         lambda1.min <- lambda.min.ratio * lambda1.max
-        lambda1 <- exp(seq(log(lambda1.max), log(lambda1.min), length.out =
-                           n.lambda1))
-        # lambda1 <- seq(lambda1.max, lambda1.min, length.out = n.lambda1)
+        lambda1     <- exp(seq(log(lambda1.max), log(lambda1.min),
+                           length.out = n.lambda1))
     }
 
     if (!is.null(lambda2)) {
@@ -158,9 +178,8 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     } else {
         lambda2.max <- max(abs(Y.train %*% X.init[, -(1:n.main)]) / nrow(X.init))
         lambda2.min <- lambda.min.ratio * lambda2.max
-        lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min),
-                           length.out = n.lambda2))
-        # lambda2 <- seq(lambda2.max, lambda2.min, length.out = n.lambda2)
+        lambda2     <- exp(seq(log(lambda2.max), log(lambda2.min),
+                               length.out = n.lambda2))
     }
 
     nx  <- ncol(X.init)
@@ -214,10 +233,10 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         higlasso.out
     })
     if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
-        predictions <- purrr::map(out, predict, newdata = list(Xm.test, Z.test))
-        mse <- purrr::map_dbl(predictions, ~ mean((.x - Y.test)^2))
+        Y.hat <- purrr::map(out, stats::predict, newdata = list(Xm.test, Z.test))
+        mse   <- purrr::map_dbl(Y.hat, ~ mean((.x - Y.test)^2))
 
-        purrr::map2(mse, out, ~ list(.x, .y))
+        purrr::map2(mse, out, ~ list(mse.test =  .x, model = .y))
     } else {
         out
     }
