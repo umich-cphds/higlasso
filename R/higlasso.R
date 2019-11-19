@@ -1,7 +1,8 @@
 #' Hierarchical Integrative Group LASSO
 #'
-#' TODO
-#'
+#' HiGLASSO is a regularization method designed to detect non linear
+#' interactions between variables, particulary exposures in environmental
+#' health studies.
 #' We have designed \code{higlasso} to
 #' \itemize{
 #'   \item Impose strong heredity constraints on two-way interaction effects
@@ -11,12 +12,14 @@
 #'   \item Induce sparsity for variable selection while respecting group
 #'       structure (group LASSO).
 #' }
-#' @param Y.train A length n numeric response vector. Training set
-#' @param X.train A n x p numeric matrix. Training set
-#' @param Z.train A n x m numeric matrix. Training set
+#'
+#' TODO
+#' @param Y.train A length n numeric response vector
+#' @param X.train A n x p numeric matrix
+#' @param Z.train A n x m numeric matrix
 #' @param Y.test A length n' numeric response vector
-#' @param X.test A n' x p numeric matrix. Test set
-#' @param Z.test A n' x m numeric matrix. Test set
+#' @param X.test A n' x p numeric matrix
+#' @param Z.test A n' x m numeric matrix
 #' @param lambda1 A numeric vector of main effect penalty tuning parameters. By
 #'     default, \code{lambda1 = NULL} and generates a sequence (length
 #'     \code{n.lambda1}) of lambda1s based off of the data and
@@ -31,7 +34,23 @@
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param delta Tolerance for convergence. Defaults to 1e-5
-#' @examples TODO
+#' @examples
+#' library(higlasso)
+#'
+#' X <- higlasso.df[, paste0("X", 1:10)]
+#' Y <- higlasso.df$y
+#'
+#' Y.train <- Y[1:400]
+#' X.train <- as.matrix(X[1:400,])
+#' Z.train <- matrix(1, 400)
+#'
+#' X.test <- as.matrix(X[401:500,])
+#' Y.test  <- Y[401:500]
+#' Z.test  <- matrix(1, 100)
+#' \dontrun{
+#' higlass.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
+#'                         X.test = X.test, Z.test = Z.test)
+#' }
 #' @author Alexander Rix
 #' @export
 higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
@@ -178,7 +197,7 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         mse <- function(Y.hat) mean((Y.hat - Y.train) ^ 2)
         i <- which.min(apply(stats::predict(e.net, X.init), 2, mse))
 
-        ae.weights <- 1 / (e.net$beta[1:p, i] + 1 / nrow(X.init))
+        ae.weights <- sqrt(1 / (e.net$beta[1:p, i] + 1 / nrow(X.init)))
         ae.weights <- c(ae.weights, rep(0, ncol(Z.train)))
         ae.net     <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda =
                                      lambda[[1]], lambda2 = lambda[[2]], pf =
