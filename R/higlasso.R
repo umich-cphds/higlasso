@@ -1,8 +1,7 @@
 #' Hierarchical Integrative Group LASSO
 #'
-#' HiGLASSO is a regularization method designed to detect non linear
-#' interactions between variables, particulary exposurees in environmental
-#' health studies.
+#' TODO
+#'
 #' We have designed \code{higlasso} to
 #' \itemize{
 #'   \item Impose strong heredity constraints on two-way interaction effects
@@ -12,47 +11,27 @@
 #'   \item Induce sparsity for variable selection while respecting group
 #'       structure (group LASSO).
 #' }
-#'
-#' TODO
-#' @param Y.train A length n numeric response vector.
-#' @param X.train A n x p numeric matrix.
-#' @param Z.train A n x m numeric matrix for unregularized covariates.
-#' @param Y.test Optional length n' numeric response vector
-#' @param X.test Optional n' x p numeric matrix
-#' @param Z.test Optional A n' x m numeric matrix
+#' @param Y.train A length n numeric response vector. Training set
+#' @param X.train A n x p numeric matrix. Training set
+#' @param Z.train A n x m numeric matrix. Training set
+#' @param Y.test A length n' numeric response vector
+#' @param X.test A n' x p numeric matrix. Test set
+#' @param Z.test A n' x m numeric matrix. Test set
 #' @param lambda1 A numeric vector of main effect penalty tuning parameters. By
 #'     default, \code{lambda1 = NULL} and generates a sequence (length
 #'     \code{n.lambda1}) of lambda1s based off of the data and
 #'     \code{min.lambda.ratio}.
 #' @param lambda2 Penalty for interaction effects
 #' @param n.lambda1 Number that determines the length of the higlasso generated
-#'     \code{lambda1} sequence.
+#'     \code{lambda1} sequence
 #' @param n.lambda2 Penalty for interaction effects
-#' @param lambda.min.ratio ratio that determines min lambda from max lambda.
-#'     Default is 0.1
+#' @param lambda.min.ratio Ratio that calculates min lambda from max lambda
 #' @param sigma Scale parameter for integrative weights. Technically a third
 #'     tuning parameter but defaults to 1 for computational tractibility
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
-#' @param maxit Maximum number of iterations. Default is 2000
+#' @param maxit Maximum number of iterations. Default is 5000
 #' @param delta Tolerance for convergence. Defaults to 1e-5
-#' @return TODO
-#' @examples
-#' library(higlasso)
-#'
-#' X <- higlasso.df[, paste0("X", 1:10)]
-#' Y <- higlasso.df$y
-#'
-#' Y.train <- Y[1:400]
-#' X.train <- as.matrix(X[1:400,])
-#' Z.train <- matrix(1, 400)
-#'
-#' X.test <- as.matrix(X[401:500,])
-#' Y.test  <- Y[401:500]
-#' Z.test  <- matrix(1, 100)
-#' \dontrun{
-#' higlass.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
-#'                         X.test = X.test, Z.test = Z.test)
-#' }
+#' @examples TODO
 #' @author Alexander Rix
 #' @export
 higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
@@ -75,7 +54,8 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     if (!is.matrix(X.train) || !is.numeric(X.train))
         stop("'X.train' must be a numeric vector.")
     if (nrow(X.train) != length(Y.train))
-        stop("The number of rows of 'X.train' does not match the length of 'Y.train'.")
+        stop(paste("The number of rows of 'X.train' does not match the length",
+                   "of 'Y.train'."))
     if (any(is.na(X.train)))
         stop("'X.train' cannot contain missing values.")
 
@@ -83,9 +63,11 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         if (!is.matrix(X.test) || !is.numeric(X.test))
             stop("'X.test' must be a numeric vector.")
         if (nrow(X.test) != length(Y.test))
-            stop("The number of rows of 'X.test' does not match the length of 'Y.test'.")
+            stop(paste("The number of rows of 'X.test' does not match the",
+                       "length of 'Y.test'."))
         if (ncol(X.test) != ncol(X.train))
-            stop("'X.test' does not have the same number of columns as 'X.train'.")
+            stop(paste("'X.test' does not have the same number of columns as",
+                       "'X.train'."))
         if (any(is.na(X.test)))
             stop("'X.test' cannot contain missing values.")
     }
@@ -128,65 +110,62 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         m <- qr.Q(qr(m))
         apply(m, 2, function(x) x / stats::sd(x))
     }
+    Xm <- purrr::map(1:ncol(X.train), generate.Xm)
 
-    Xm <- lapply(1:ncol(X.train), generate.Xm)
+    p.main <- sum(purrr::map_dbl(Xm, ~ ncol(.x)))
 
-    if (is.null(colnames(X.train)))
-        colnames(X.train) <- 1:ncol(X.train)
-    names(Xm) <- colnames(X.train)
-
-    if (is.null(names(Xm)))
-        names(Xm) <- paste0("G", 1:length(Xm))
-
-    Xm.train <- lapply(Xm, function(x) x[1:nrow(X.train), ])
-    Xm.test  <- lapply(Xm, function(x) x[-(1:nrow(X.train)), ])
+    Xm.train <- purrr::map(Xm, ~ .x[1:nrow(X.train), ])
+    Xm.test  <- purrr::map(Xm, ~ .x[-(1:nrow(X.train)), ])
     Xi.train <- generate_Xi(Xm.train)
-    Xi.test  <- generate_Xi(Xm.test)
 
-    X.init <- do.call("cbind", Xm.train)
-
-    n.main <- ncol(X.init)
-
-    higlasso.groups <- lapply(1:length(Xm.train), function(i) rep(i, ncol(Xm.train[[i]])))
-    n.groups <- length(Xm.train)
+    j <- purrr::map_lgl(Xi.train, ~ ncol(.x) > 0)
     n <- length(Xm.train)
-    for (j in 1:n.groups) {
-        for (i in 1:n.groups) {
-            p <- ncol(Xi.train[[i, j]])
-            if (p > 0) {
-                X.init <- cbind(X.init, Xi.train[[i, j]])
-                n <- n + 1
-                higlasso.groups[[n]] <- rep(n, p)
-            }
-        }
-    }
+    groups <- purrr::flatten_dbl(c(
+        purrr::imap(Xm.train,    function(Xm.i, i) rep(i, ncol(Xm.i))),
+        purrr::imap(Xi.train[j], function(Xi.i, i) rep(n + i, ncol(Xi.i)))
+    ))
 
-    # generate lambda1/2 sequences if user does not pre-specify them
+    # construct "inverse" of groups
+    i.groups <- vector("list", max(groups))
+    purrr::iwalk(groups, function(g, i) i.groups[[g]] <<- c(i.groups[[g]], i))
+
+    X.init <- do.call("cbind", c(Xm.train, Xi.train[j]))
+
+    # generate lambda sequences if user does not pre-specify them
+    YtX <- abs(Y.train %*% X.init)[1,] / nrow(X.init)
     if (!is.null(lambda1)) {
         if (!is.numeric(lambda1) || any(lambda1 <= 0))
             stop("'lambda1' must be a nonnegative numeric array.")
     } else {
-        lambda1.max <- max(abs(Y.train %*% X.init[, 1:n.main]) / nrow(X.init))
+        lambda1.max <- max(YtX[1:p.main])
         lambda1.min <- lambda.min.ratio * lambda1.max
-        lambda1     <- exp(seq(log(lambda1.max), log(lambda1.min),
-                           length.out = n.lambda1))
+        lambda1 <- exp(seq(log(lambda1.max), log(lambda1.min), length.out =
+                           n.lambda1))
     }
 
     if (!is.null(lambda2)) {
         if (!is.numeric(lambda2) || any(lambda2 <= 0))
             stop("'lambda2' must be a nonnegative numeric array.")
     } else {
-        lambda2.max <- max(abs(Y.train %*% X.init[, -(1:n.main)]) / nrow(X.init))
+        lambda2.max <- max(YtX[-(1:p.main)])
         lambda2.min <- lambda.min.ratio * lambda2.max
-        lambda2     <- exp(seq(log(lambda2.max), log(lambda2.min),
-                               length.out = n.lambda2))
+        lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min),
+                           length.out = n.lambda2))
     }
 
-    nx  <- ncol(X.init)
+    p       <- ncol(X.init)
     X.init  <- cbind(X.init, Z.train)
-    weights <- c(rep(1, nx), rep(0, ncol(Z.train)))
+    weights <- c(rep(1, p), rep(0, ncol(Z.train)))
+
+
+    # return(purrr::cross_df(list(lambda1 = lambda1, lambda2 = lambda2)))
+
+
     out <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
     {
+
+        # gglasso <- gglasso::glasso(X.init, Y.train, group = groups)
+
         e.net <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
                                 lambda[[2]], pf = weights, pf2 = weights,
                                 eps = delta, maxit = max(maxit, 1e6))
@@ -196,35 +175,30 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
 
         # get the best scoring lambda from gcdnet and use that to generate
         # inital weights for the adpative elastic net
-        mse <- function(p) mean((p - Y.train) ^ 2)
+        mse <- function(Y.hat) mean((Y.hat - Y.train) ^ 2)
         i <- which.min(apply(stats::predict(e.net, X.init), 2, mse))
 
-        ae.weights <- 1 / (e.net$beta[1:nx, i] + 1 / nrow(X.init))
+        ae.weights <- 1 / (e.net$beta[1:p, i] + 1 / nrow(X.init))
         ae.weights <- c(ae.weights, rep(0, ncol(Z.train)))
-        ae.net <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda =
-                                 lambda[[1]], lambda2 = lambda[[2]], pf =
-                                 ae.weights, eps = delta, maxit = max(maxit, 1e6))
+        ae.net     <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda =
+                                     lambda[[1]], lambda2 = lambda[[2]], pf =
+                                     ae.weights, eps = delta, maxit =
+                                     max(maxit, 1e6))
 
         if (e.net$jerr != 0)
             stop("Error in gcdnet::gcdnet.")
 
-        coefs <- ae.net$beta[1:nx]
-
-        n <- 1
-        higlasso.coefs <- lapply(1:length(higlasso.groups), function(i)
-        {
-            j <- length(higlasso.groups[[i]])
-            ret <- coefs[n:(n + j - 1)]
-            n <<- n + j
-            ret
-        })
-        beta <- higlasso.coefs[1:length(Xm.train)]
-        eta  <- higlasso.coefs[-(1:length(Xm))]
+        coefs <- purrr::map(i.groups, ~ ae.net$beta[.x])
+        beta <- coefs[1:n]
+        eta  <- coefs[-(1:n)]
         higlasso.out <- higlasso_internal(Y.train, Xm.train, Xi.train, Z.train,
                                           beta, eta, lambda[[1]], lambda[[2]],
                                           sigma, maxit, delta)
 
-        names(higlasso.out$beta) <- names(Xm)
+        if (is.null(colnames(X.train)))
+            names(higlasso.out$beta) <- paste0("V", 1:length(Xm))
+        else
+            names(higlasso.out$beta) <- colnames(X.train)
 
         higlasso.out$degree <- degree
         higlasso.out$lambda <- c(lambda[[1]], lambda[[2]])
@@ -233,10 +207,10 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         higlasso.out
     })
     if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
-        Y.hat <- purrr::map(out, stats::predict, newdata = list(Xm.test, Z.test))
-        mse   <- purrr::map_dbl(Y.hat, ~ mean((.x - Y.test)^2))
+        predictions <- purrr::map(out, stats::predict, newdata = list(Xm.test, Z.test))
+        mse <- purrr::map_dbl(predictions, ~ mean((.x - Y.test)^2))
 
-        purrr::map2(mse, out, ~ list(mse.test =  .x, model = .y))
+        purrr::map2(mse, out, ~ list(.x, .y))
     } else {
         out
     }
