@@ -10,39 +10,42 @@ higlasso(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
   maxit = 5000, delta = 1e-05)
 }
 \arguments{
-\item{Y.train}{A length n numeric response vector.}
+\item{Y.train}{A length n numeric response vector}
 
-\item{X.train}{A n x p numeric matrix.}
+\item{X.train}{A n x p numeric matrix}
 
-\item{Z.train}{A n x m numeric matrix for unregularized covariates.}
+\item{Z.train}{A n x m numeric matrix}
 
-\item{Y.test}{Optional length n' numeric response vector}
+\item{Y.test}{A length n' numeric response vector}
 
-\item{X.test}{Optional n' x p numeric matrix}
+\item{X.test}{A n' x p numeric matrix}
 
-\item{Z.test}{Optional A n' x m numeric matrix}
+\item{Z.test}{A n' x m numeric matrix}
 
-\item{lambda1}{A numeric vector of main effect penalty tuning parameters. By
-default, \code{lambda1 = NULL} and generates a sequence (length
+\item{lambda1}{A numeric vector of main effect penalties on which to tune
+By default, \code{lambda1 = NULL} and generates a sequence (length
 \code{n.lambda1}) of lambda1s based off of the data and
-\code{min.lambda.ratio}.}
+\code{min.lambda.ratio}}
 
-\item{lambda2}{Penalty for interaction effects}
+\item{lambda2}{A numeric vector of interaction effects penalties on which to
+tune. By default, \code{lambda2 = NULL} and generates a sequence (length
+\code{n.lambda2}) of lambda2s based off of the data and
+\code{min.lambda.ratio}}
 
-\item{n.lambda1}{Number that determines the length of the higlasso generated
-\code{lambda1} sequence.}
+\item{n.lambda1}{The number of lambda1 values to generate. Default is 10,
+minimum is 2. If \code{lambda1 != NULL}, this parameter is ignored}
 
-\item{n.lambda2}{Penalty for interaction effects}
+\item{n.lambda2}{The number of lambda2 values to generate. Default is 10,
+minimum is 2. If \code{lambda2 != NULL}, this parameter is ignored}
 
-\item{lambda.min.ratio}{ratio that determines min lambda from max lambda.
-Default is 0.1}
+\item{lambda.min.ratio}{Ratio that calculates min lambda from max lambda}
 
 \item{sigma}{Scale parameter for integrative weights. Technically a third
 tuning parameter but defaults to 1 for computational tractibility}
 
 \item{degree}{Degree of \code{bs} basis expansion. Default is 3}
 
-\item{maxit}{Maximum number of iterations. Default is 2000}
+\item{maxit}{Maximum number of iterations. Default is 5000}
 
 \item{delta}{Tolerance for convergence. Defaults to 1e-5}
 }
@@ -51,7 +54,7 @@ TODO
 }
 \description{
 HiGLASSO is a regularization method designed to detect non linear
-interactions between variables, particulary exposurees in environmental
+interactions between variables, particulary exposures in environmental
 health studies.
 We have designed \code{higlasso} to
 \itemize{
@@ -64,7 +67,18 @@ structure (group LASSO).
 }
 }
 \details{
-TODO
+The objective function \code{higlasso} solves is
+% Renders the objective function as html in Rstudio and in raw tex otherwise.
+\ifelse{html}{\out{<center> argmin &beta;<sub>j</sub>, &eta;<sub>jj'</sub>
+&frac12;|| Y - X<sub>j</sub> &beta;<sub>j</sub> -
+X<sub>jj'</sub> (&eta;<sub>jj'</sub> &odot; &beta;<sub>j</sub>
+&otimes; &beta;<sub>j'</sub>)||<sup>2</sup>
++ &lambda;<sub>1</sub>w<sub>j</sub>||&beta;<sub>j</sub> || +
+&lambda;<sub>2</sub> w<sub>jj'</sub> ||&eta;<sub>jj'</sub>||
+</center>}}{
+\deqn{argmin \\beta_j, \\eta_{jj'} \frac{1}{2}|| Y - X_j \\beta_j}
+\deqn{- X_{jj'} (\\eta_{jj'} \odot \\beta_j \otimes \\beta_{j'})||^2}
+\deqn{+ \\lambda_1 w_j ||\\beta_j|| + \\lambda_2 w_{jj'} || \\eta_{jj'}||}}
 }
 \examples{
 library(higlasso)
@@ -80,9 +94,13 @@ X.test <- as.matrix(X[401:500,])
 Y.test  <- Y[401:500]
 Z.test  <- matrix(1, 100)
 \dontrun{
-higlass.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
-                        X.test = X.test, Z.test = Z.test)
+# This can take a bit of time
+higlasso.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
+                         X.test = X.test, Z.test = Z.test)
 }
+}
+\references{
+TODO
 }
 \author{
 Alexander Rix

@@ -6,4 +6,5 @@
 higlasso_*
 ^*.RData
 .Rhistory
+.RData
 ^*.R

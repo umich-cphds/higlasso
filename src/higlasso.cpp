@@ -248,7 +248,8 @@ void bls_eta(vec &Yt, field <vec> new_eta, field <vec> &eta, field <vec> beta,
     }
     for (uword k = 0; k < beta.n_elem; ++k)
         for (uword j = 0; j < k; ++j) {
-            if (norm(beta(j)) < DBL_EPSILON || norm(beta(k)) < DBL_EPSILON || norm(eta(j, k)) < DBL_EPSILON)
+            if (norm(beta(j)) < DBL_EPSILON || norm(beta(k)) < DBL_EPSILON
+                                            || norm(eta(j, k)) < DBL_EPSILON)
                 eta(j, k).fill(0.0);
         }
 }
@@ -324,8 +325,8 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
         Rcpp::warning("'maxit' reached without convergence: %f > %f\n",
         (pen_lik0 - pen_lik1) / pen_lik0, delta);
 
-    double mspe = dot(residuals, residuals) / (2.0 * residuals.n_elem);
+    double mse = dot(residuals, residuals) / residuals.n_elem;
     return Rcpp::List::create(Rcpp::Named("alpha") = alpha,
         Rcpp::Named("beta") = beta, Rcpp::Named("eta") = eta,
-        Rcpp::Named("mspe") = mspe);
+        Rcpp::Named("mse") = mse);
 }

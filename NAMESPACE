@@ -2,6 +2,7 @@
 
 S3method(predict,higlasso)
 S3method(print,higlasso)
+S3method(print,higlasso.grid)
 S3method(summary,higlasso)
 export(higlasso)
 importFrom(Rcpp,evalCpp)
