@@ -104,120 +104,39 @@ cv.higlasso <- function(Y, X, Z, lambda1 = NULL, lambda2 = NULL,
       folds <- c(rep(1:nfolds, p), 1:r)
       folds <- sample(folds, n)
     }
+    model <- higlasso(Y, X, Z, lambda1 = lambda1, lambda2 = lambda2,
+                      n.lambda1 = n.lambda1, n.lambda2 = n.lambda2,
+                      lambda.min.ratio = lambda.min.ratio, sigma = sigma,
+                      degree = degree, maxit = maxit, delta = delta)
 
-    generate.Xm <- function(i)
-    {
-        m <- splines::bs(X[, i]), degree = degree)
-        m <- qr.Q(qr(m))
-        apply(m, 2, function(x) x / stats::sd(x))
-    }
-    Xm <- purrr::map(1:ncol(X), generate.Xm)
+    lambda1   <- unique(model$lambda[, 1])
+    lambda2   <- unique(model$lambda[, 2])
+    cv.models <- vector("list", nfolds)
+    for (i in 1:nfolds) {
+        Y.train <- Y[folds != i]
+        Y.test  <- Y[folds == i]
+        X.train <- X[folds != i, , drop = F]
+        X.test  <- X[folds == i, , drop = F]
+        Z.train <- Z[folds != i, , drop = F]
+        Z.test  <- Z[folds == i, , drop = F]
 
-    # get number of main effect variables.
-    p.main <- sum(purrr::map_dbl(Xm, function(Xj) ncol(Xj)))
-
-    Xi <- generate_Xi(Xm)
-
-    j <- purrr::map_lgl(Xi.train, ~ ncol(.x) > 0)
-    groups <- purrr::flatten_dbl(c(
-        purrr::imap(Xm,    function(Xm.i, i) rep(i, ncol(Xm.i))),
-        purrr::imap(Xi[j], function(Xi.i, i) rep(length(Xm) + i, ncol(Xi.i)))
-    ))
-
-    # construct "inverse" of groups
-    i.groups <- vector("list", max(groups))
-    purrr::iwalk(groups, function(g, i) i.groups[[g]] <<- c(i.groups[[g]], i))
-
-    X.init <- do.call("cbind", c(Xm, Xi[j]))
-
-    # generate lambda sequences if user does not pre-specify them
-    YtX <- abs(Y.train %*% X.init)[1,] / nrow(X.init)
-    if (!is.null(lambda1)) {
-        if (!is.numeric(lambda1) || any(lambda1 <= 0))
-            stop("'lambda1' must be a nonnegative numeric array.")
-    } else {
-        lambda1.max <- max(YtX[1:p.main])
-        lambda1.min <- lambda.min.ratio * lambda1.max
-        lambda1 <- exp(seq(log(lambda1.max), log(lambda1.min), length.out =
-                           n.lambda1))
+        cv.models[[i]] <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
+                                   X.test = X.test, Z.test = Z.test, lambda1 =
+                                   lambda1, lambda2 = lambda2, n.lambda1 =
+                                   n.lambda1, n.lambda2 = n.lambda2,
+                                   lambda.min.ratio = lambda.min.ratio,
+                                   sigma = sigma, degree = degree, maxit =
+                                   maxit, delta = delta)
     }
 
-    if (!is.null(lambda2)) {
-        if (!is.numeric(lambda2) || any(lambda2 <= 0))
-            stop("'lambda2' must be a nonnegative numeric array.")
-    } else {
-        lambda2.max <- max(YtX[-(1:p.main)])
-        lambda2.min <- lambda.min.ratio * lambda2.max
-        lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min), len = n.lambda2))
-    }
+    cvm  <- purrr::reduce(purrr::map(cv.models, ~ .x$mse.test), `+`) / nfolds
+    cvsd <- purrr::reduce(purrr::map(cv.models, ~ .x$mse.test),~ .x + (.y - cvm) ^ 2)
+    cvsd <- sqrt(cvsd / nfolds - 1)
 
-    p       <- ncol(X.init)
-    X.init  <- cbind(X.init, Z)
-    weights <- c(rep(1, p), rep(0, ncol(Z)))
+    model$cvm  <- cvm
+    model$cvsd <- cvsd
 
-    models <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
-    {
-        #Xm.train <- purrr::map(Xm, function(Xj) Xj[1:nrow(X), ])
-        e.net <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
-                                lambda[[2]], pf = weights, pf2 = weights,
-                                eps = delta, maxit = max(maxit, 1e6))
-
-        if (e.net$jerr != 0)
-            stop("Error in gcdnet::gcdnet.")
-
-        # get the best scoring lambda from gcdnet and use that to generate
-        # inital weights for the adpative elastic net
-        mse <- function(Y.hat) mean((Y.hat - Y.train) ^ 2)
-        i <- which.min(apply(stats::predict(e.net, X.init), 2, mse))
-
-        ae.weights <- sqrt(abs(1 / (e.net$beta[1:p, i] + 1 / nrow(X.init))))
-        ae.weights <- c(ae.weights, rep(0, ncol(Z.train)))
-        ae.net     <- gcdnet::gcdnet(X.init, Y.train, method = "ls",
-                                     lambda2 = lambda[[2]], pf = ae.weights,
-                                     eps = delta, maxit = max(maxit, 1e6))
-
-        if (e.net$jerr != 0)
-            stop("Error in gcdnet::gcdnet.")
-        i <- which.min(apply(stats::predict(ae.net, X.init), 2, mse))
-
-        coefs <- purrr::map(i.groups, ~ ae.net$beta[.x, i])
-        beta <- coefs[1:n]
-        eta  <- coefs[-(1:n)]
-        out <- higlasso_internal(Y.train, Xm.train, Xi.train, Z.train, beta,
-                                 eta, lambda[[1]], lambda[[2]], sigma, maxit,
-                                 delta)
-
-        if (is.null(colnames(X)))
-            names(out$beta) <- paste0("V", 1:length(Xm))
-        else
-            names(out$beta) <- colnames(X)
-
-        out$degree <- degree
-        out$lambda <- c(lambda[[1]], lambda[[2]])
-        out$df = sum(purrr::map_lgl(c(out$beta, out$eta[j]), ~ any(.x != 0)))
-        class(out) <- "higlasso"
-        out
-    })
-
-    # Calculate test error if given.
-    if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
-        newdata     <- list(Xm.test, Z.test)
-        predictions <- purrr::map(models, stats::predict, newdata = newdata)
-        mse.test    <- purrr::map_dbl(predictions, ~ mean((.x - Y.test) ^ 2))
-    } else {
-        mse.test <- rep(NA, length(models))
-    }
-
-    out <- purrr::reduce(models, .init = list(lambda = NULL, mse.train = NULL,
-                         mse.test = mse.test),
-                         function(list, model)
-                         {
-                             list(lambda = rbind(list$lambda, model$lambda),
-                                  mse.train = c(list$mse.train, model$mse),
-                                  mse.test = list$mse.test)
-                         }
-    )
-    out$model  <- models
-    class(out) <- "higlasso.grid"
-    out
+    model$mse.test <- NULL
+    class(model) = "cv.higlsaso"
+    model
 }

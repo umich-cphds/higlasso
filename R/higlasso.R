@@ -244,7 +244,7 @@ check.XZ <- function(XZ, Y)
     name.XZ <- deparse(substitute(XZ))
     name.Y <- deparse(substitute(Y))
     if (!is.matrix(XZ) || !is.numeric(XZ))
-        stop("'", name.XZ, "' must be a numeric vector.")
+        stop("'", name.XZ, "' must be a numeric matrix.")
     if (nrow(XZ) != length(Y))
         stop("The number of rows of '", name.XZ, "' does not match the length",
              " of '", name.Y, "'.")
