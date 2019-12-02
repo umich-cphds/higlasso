@@ -25,12 +25,9 @@
 #' \deqn{argmin \\beta_j, \\eta_{jj'} \frac{1}{2}|| Y - X_j \\beta_j}
 #' \deqn{- X_{jj'} (\\eta_{jj'} \odot \\beta_j \otimes \\beta_{j'})||^2}
 #' \deqn{+ \\lambda_1 w_j ||\\beta_j|| + \\lambda_2 w_{jj'} || \\eta_{jj'}||}}
-#' @param Y.train A length n numeric response vector
-#' @param X.train A n x p numeric matrix
-#' @param Z.train A n x m numeric matrix
-#' @param Y.test A length n' numeric response vector
-#' @param X.test A n' x p numeric matrix
-#' @param Z.test A n' x m numeric matrix
+#' @param Y A length n numeric response vector
+#' @param X A n x p numeric matrix
+#' @param Z A n x m numeric matrix
 #' @param lambda1 A numeric vector of main effect penalties on which to tune
 #'     By default, \code{lambda1 = NULL} and generates a sequence (length
 #'     \code{n.lambda1}) of lambda1s based off of the data and
@@ -44,6 +41,10 @@
 #' @param n.lambda2 The number of lambda2 values to generate. Default is 10,
 #'     minimum is 2. If \code{lambda2 != NULL}, this parameter is ignored
 #' @param lambda.min.ratio Ratio that calculates min lambda from max lambda
+#' @param nfolds Number of folds for cross validation. Default is 10. The
+#'     minimum is 3, and while the maximum is the number of observations
+#'     (ie leave one out cross validation), this is a bad idea.
+#' @param foldid TODO
 #' @param sigma Scale parameter for integrative weights. Technically a third
 #'     tuning parameter but defaults to 1 for computational tractibility
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
@@ -59,7 +60,7 @@
 #' Y <- higlasso.df$y
 #'
 #' Y.train <- Y[1:400]
-#' X.train <- as.matrix(X[1:400,])
+#' X <- as.matrix(X[1:400,])
 #' Z.train <- matrix(1, 400)
 #'
 #' X.test <- as.matrix(X[401:500,])
@@ -67,34 +68,18 @@
 #' Z.test  <- matrix(1, 100)
 #' \dontrun{
 #' # This can take a bit of time
-#' higlasso.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
+#' higlasso.out <- higlasso(Y.train, X, Z.train, Y.test = Y.test,
 #'                          X.test = X.test, Z.test = Z.test)
 #' }
 #' @export
-higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
-                        Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
+cv.higlasso <- function(Y, X, Z, lambda1 = NULL, lambda2 = NULL,
                         n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .1,
-                        sigma = 1, degree = 3, maxit = 5000, delta = 1e-5)
+                        nfolds = 10, foldid = NULL, sigma = 1, degree = 3,
+                        maxit = 5000, delta = 1e-5)
 {
-    check.Y(Y.train)
-    if (!is.null(Y.test))
-        check.Y(Y.test)
-
-    check.XZ(X.train, Y.train)
-    if (!is.null(X.test)) {
-        check.XZ(X.test, Y.test)
-        if (ncol(X.test) != ncol(X.train))
-            stop("'X.test' does not have the same number of columns as ",
-                 "'X.train'.")
-    }
-
-    check.XZ(Z.train, Y.train)
-    if (!is.null(Z.test)) {
-        check.XZ(Z.test, Y.test)
-        if (ncol(Z.test) != ncol(Z.train))
-            stop("'Z.test' does not have the same number of columns as ",
-                 "'Z.train'.")
-    }
+    check.Y(Y)
+    check.XZ(X, Y)
+    check.XZ(Z, Y)
 
     if (!is.numeric(sigma) || sigma < 0)
         stop("'sigma' must be a nonnegative number.")
@@ -110,33 +95,40 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     if (!is.numeric(delta) || delta <= 0)
         stop("'delta' should be a postive number.")
 
+    n <- length(Y)
+    if (!is.null(foldid)) {
+        stop("Not implemented")
+    } else {
+      r     <- n %% nfolds
+      p     <- (n - r) / nfolds
+      folds <- c(rep(1:nfolds, p), 1:r)
+      folds <- sample(folds, n)
+    }
+
     generate.Xm <- function(i)
     {
-        m <- splines::bs(c(X.train[, i], X.test[, i]), degree = degree)
+        m <- splines::bs(X[, i]), degree = degree)
         m <- qr.Q(qr(m))
         apply(m, 2, function(x) x / stats::sd(x))
     }
-    Xm <- purrr::map(1:ncol(X.train), generate.Xm)
+    Xm <- purrr::map(1:ncol(X), generate.Xm)
 
     # get number of main effect variables.
     p.main <- sum(purrr::map_dbl(Xm, function(Xj) ncol(Xj)))
 
-    Xm.train <- purrr::map(Xm, function(Xj) Xj[1:nrow(X.train), ])
-    Xm.test  <- purrr::map(Xm, function(Xj) Xj[-(1:nrow(X.train)), ])
-    Xi.train <- generate_Xi(Xm.train)
+    Xi <- generate_Xi(Xm)
 
     j <- purrr::map_lgl(Xi.train, ~ ncol(.x) > 0)
-    n <- length(Xm.train)
     groups <- purrr::flatten_dbl(c(
-        purrr::imap(Xm.train,    function(Xm.i, i) rep(i, ncol(Xm.i))),
-        purrr::imap(Xi.train[j], function(Xi.i, i) rep(n + i, ncol(Xi.i)))
+        purrr::imap(Xm,    function(Xm.i, i) rep(i, ncol(Xm.i))),
+        purrr::imap(Xi[j], function(Xi.i, i) rep(length(Xm) + i, ncol(Xi.i)))
     ))
 
     # construct "inverse" of groups
     i.groups <- vector("list", max(groups))
     purrr::iwalk(groups, function(g, i) i.groups[[g]] <<- c(i.groups[[g]], i))
 
-    X.init <- do.call("cbind", c(Xm.train, Xi.train[j]))
+    X.init <- do.call("cbind", c(Xm, Xi[j]))
 
     # generate lambda sequences if user does not pre-specify them
     YtX <- abs(Y.train %*% X.init)[1,] / nrow(X.init)
@@ -160,11 +152,12 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     }
 
     p       <- ncol(X.init)
-    X.init  <- cbind(X.init, Z.train)
-    weights <- c(rep(1, p), rep(0, ncol(Z.train)))
+    X.init  <- cbind(X.init, Z)
+    weights <- c(rep(1, p), rep(0, ncol(Z)))
 
     models <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
     {
+        #Xm.train <- purrr::map(Xm, function(Xj) Xj[1:nrow(X), ])
         e.net <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
                                 lambda[[2]], pf = weights, pf2 = weights,
                                 eps = delta, maxit = max(maxit, 1e6))
@@ -194,10 +187,10 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
                                  eta, lambda[[1]], lambda[[2]], sigma, maxit,
                                  delta)
 
-        if (is.null(colnames(X.train)))
+        if (is.null(colnames(X)))
             names(out$beta) <- paste0("V", 1:length(Xm))
         else
-            names(out$beta) <- colnames(X.train)
+            names(out$beta) <- colnames(X)
 
         out$degree <- degree
         out$lambda <- c(lambda[[1]], lambda[[2]])
@@ -227,28 +220,4 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     out$model  <- models
     class(out) <- "higlasso.grid"
     out
-}
-
-# Type checking functions to save space.
-check.Y <- function(Y)
-{
-    name <- deparse(substitute(Y))
-    if (!is.vector(Y.train) || !is.numeric(Y.train))
-        stop("'", name ,"' must be a numeric vector.")
-        if (any(is.na(Y.train)))
-        stop("'", name, "' cannot contain missing values.")
-}
-
-check.XZ <- function(XZ, Y)
-{
-    name.XZ <- deparse(substitute(XZ))
-    name.Y <- deparse(substitute(Y))
-    if (!is.matrix(XZ) || !is.numeric(XZ))
-        stop("'", name.XZ, "' must be a numeric vector.")
-    if (nrow(XZ) != length(Y))
-        stop("The number of rows of '", name.XZ, "' does not match the length",
-             " of '", name.Y, "'.")
-    if (any(is.na(XZ)))
-        stop("'", name.XZ, "' cannot contain missing values.")
-
 }
