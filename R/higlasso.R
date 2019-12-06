@@ -123,9 +123,14 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
 
     Xm.train <- purrr::map(Xm, function(Xj) Xj[1:nrow(X.train), ])
     Xm.test  <- purrr::map(Xm, function(Xj) Xj[-(1:nrow(X.train)), ])
-    Xi.train <- generate_Xi(Xm.train)
-
+    Xi       <- generate_Xi(Xm.train)
     j <- purrr::map_lgl(Xi.train, ~ ncol(.x) > 0)
+
+    Xi.train <- lapply(Xi[j], function(xi)
+                              {
+                                  q <- qr.Q(qr(xi))
+                                  apply(q, 2, function(x) x / stats::sd(x))
+                              })
     n <- length(Xm.train)
     groups <- purrr::flatten_dbl(c(
         purrr::imap(Xm.train,    function(Xm.i, i) rep(i, ncol(Xm.i))),

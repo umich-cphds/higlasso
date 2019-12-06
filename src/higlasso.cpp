@@ -27,7 +27,7 @@ arma::field <arma::mat> generate_Xi(arma::field <arma::mat> Xm)
             // Collapse C into n x (pj * p$) matrix */
             C.reshape(C.n_rows, C.n_cols * C.n_slices, 1);
             // Make Xi(j,j$) have unit column variance
-            Xi(j, j$) = C.slice(0).each_col([](vec& v){v /= stddev(v);});
+            Xi(j, j$) = C.slice(0);
         }
     }
     return Xi;
