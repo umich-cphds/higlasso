@@ -1,3 +1,24 @@
+generate_design_matrices <- function(X, degree)
+{
+    generate.Xm <- function(i)
+    {
+        m <- splines::bs(X[, i], degree = degree)
+        apply(m, 2, function(x) (x - mean(x)) / stats::sd(x))
+    }
+
+    Xm <- purrr::map(1:ncol(X.train), generate.Xm)
+    Xi <- generate_Xi(Xm)
+    decomp <- function(Xmi)
+    {
+        if (ncol(Xmi) > 0)
+            apply(qr.Q(qr(Xmi)), 2, function(x) x / stats::sd(x))
+        else
+            Xmi
+    }
+
+    list(Xm = purrr::map(Xm, decomp), Xi = purrr::map(Xi, decomp))
+}
+
 
 #' Print higlasso fits
 #' @param x An object of type 'higlasso'
@@ -9,9 +30,9 @@ print.higlasso.grid <- function(x, ...)
         stop("'x' is not a higlasso fit.")
 
 
-    df <-data.frame(lambda1 = x$lambda[,1], lambda2 = x$lambda[, 2],
-                    mse.train = x$mse.train, mse.test = x$mse.test,
-                    df = purrr::map_dbl(x$model, ~ .x$df))
+    df <- data.frame(lambda1 = x$lambda[,1], lambda2 = x$lambda[, 2],
+                     mse.train = x$mse.train, mse.test = x$mse.test,
+                     df = purrr::map_dbl(x$model, ~ .x$df))
 
     print(df, zero.print = "", right = F)
 }
@@ -78,11 +99,11 @@ predict.higlasso <- function(object, newdata, ...)
     eta  <- object$eta
 
     if (!missing(newdata)) {
-        if (!is.list(newdata) || length(newdata) != 2)
+        if (!is.list(newdata) || length(newdata) != 3)
             stop("'newdata' should be a length 3 list.")
         Xm <- newdata[[1]]
-        Xi <- generate_Xi(Xm)
-        Z  <- newdata[[2]]
+        Xi <- newdata[[2]]
+        Z  <- newdata[[3]]
     }
     else {
         Xm  <- object$Xm

@@ -110,27 +110,32 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     if (!is.numeric(delta) || delta <= 0)
         stop("'delta' should be a postive number.")
 
-    generate.Xm <- function(i)
-    {
-        m <- splines::bs(c(X.train[, i], X.test[, i]), degree = degree)
-        m <- qr.Q(qr(m))
-        apply(m, 2, function(x) x / stats::sd(x))
-    }
-    Xm <- purrr::map(1:ncol(X.train), generate.Xm)
-
     # get number of main effect variables.
+
+    matrices <- generate_design_matrices(rbind(X.train, X.test), degree)
+
+    Xm <- matrices$Xm
+    Xi <- matrices$Xi
     p.main <- sum(purrr::map_dbl(Xm, function(Xj) ncol(Xj)))
+    j <- purrr::map_lgl(Xi, ~ ncol(.x) > 0)
 
     Xm.train <- purrr::map(Xm, function(Xj) Xj[1:nrow(X.train), ])
     Xm.test  <- purrr::map(Xm, function(Xj) Xj[-(1:nrow(X.train)), ])
-    Xi       <- generate_Xi(Xm.train)
-    j <- purrr::map_lgl(Xi.train, ~ ncol(.x) > 0)
 
-    Xi.train <- lapply(Xi[j], function(xi)
-                              {
-                                  q <- qr.Q(qr(xi))
-                                  apply(q, 2, function(x) x / stats::sd(x))
-                              })
+    Xi.train <- lapply(Xi, function(x)
+    {
+        if (ncol(x) > 0)
+            x[1:nrow(X.train),]
+        else
+            x
+    })
+    Xi.test <- lapply(Xi, function(x)
+    {
+        if (ncol(x) > 0)
+            x[-(1:nrow(X.train)),]
+        else
+            x
+    })
     n <- length(Xm.train)
     groups <- purrr::flatten_dbl(c(
         purrr::imap(Xm.train,    function(Xm.i, i) rep(i, ncol(Xm.i))),
@@ -213,7 +218,7 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
 
     # Calculate test error if given.
     if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
-        newdata     <- list(Xm.test, Z.test)
+        newdata     <- list(Xm.test, Xi.test, Z.test)
         predictions <- purrr::map(models, stats::predict, newdata = newdata)
         mse.test    <- purrr::map_dbl(predictions, ~ mean((.x - Y.test) ^ 2))
     } else {
@@ -238,9 +243,9 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
 check.Y <- function(Y)
 {
     name <- deparse(substitute(Y))
-    if (!is.vector(Y.train) || !is.numeric(Y.train))
+    if (!is.vector(Y) || !is.numeric(Y))
         stop("'", name ,"' must be a numeric vector.")
-        if (any(is.na(Y.train)))
+        if (any(is.na(Y)))
         stop("'", name, "' cannot contain missing values.")
 }
 
