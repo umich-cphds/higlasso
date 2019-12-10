@@ -103,6 +103,7 @@ predict.higlasso <- function(object, newdata, ...)
             stop("'newdata' should be a length 3 list.")
         Xm <- newdata[[1]]
         Xi <- newdata[[2]]
+        dim(Xi) <- c(n, n)
         Z  <- newdata[[3]]
     }
     else {
