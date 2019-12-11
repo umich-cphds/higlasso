@@ -6,7 +6,7 @@ generate_design_matrices <- function(X, degree)
         apply(m, 2, function(x) (x - mean(x)) / stats::sd(x))
     }
 
-    Xm <- purrr::map(1:ncol(X.train), generate.Xm)
+    Xm <- purrr::map(1:ncol(X), generate.Xm)
     Xi <- generate_Xi(Xm)
     decomp <- function(Xmi)
     {
