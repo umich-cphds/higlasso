@@ -136,6 +136,7 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         else
             x
     })
+
     n <- length(Xm.train)
     groups <- purrr::flatten_dbl(c(
         purrr::imap(Xm.train,    function(Xm.i, i) rep(i, ncol(Xm.i))),
@@ -171,35 +172,42 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
 
     p       <- ncol(X.init)
     X.init  <- cbind(X.init, Z.train)
-    weights <- c(rep(1, p), rep(0, ncol(Z.train)))
+
+    # penalty factor for enet. Z contains unregualrized coefficents so we set
+    # those weights to 0
+    pf <- c(rep(1, p), rep(0, ncol(Z.train)))
+
+    nu < - log(ncol(X.init) + ncol(Z.train)) / log(nrow(X.init))
+    gamma <- ceiling(2 * nu / (1 - nu))
 
     models <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
     {
-        e.net <- gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
-                                lambda[[2]], pf = weights, pf2 = weights,
-                                eps = delta, maxit = max(maxit, 1e6))
+        enet <- cv.gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
+                                  lambda[[2]], pf = pf, pf2 = pf, eps = delta,
+                                  maxit = max(maxit, 1e6))
 
         if (e.net$jerr != 0)
             stop("Error in gcdnet::gcdnet.")
 
         # get the best scoring lambda from gcdnet and use that to generate
         # inital weights for the adpative elastic net
-        mse <- function(Y.hat) mean((Y.hat - Y.train) ^ 2)
-        i <- which.min(apply(stats::predict(e.net, X.init), 2, mse))
 
-        ae.weights <- sqrt(abs(1 / (e.net$beta[1:p, i] + 1 / nrow(X.init))))
-        ae.weights <- c(ae.weights, rep(0, ncol(Z.train)))
-        ae.net     <- gcdnet::gcdnet(X.init, Y.train, method = "ls",
-                                     lambda2 = lambda[[2]], pf = ae.weights,
-                                     eps = delta, maxit = max(maxit, 1e6))
+        weights <- stats::coef(enet, s = enet$lambda.min)
+        weights <- 1 / abs(weights + 1 / nrow(X.init))
+        weights <- c(weights, rep(0, ncol(Z.train))) ^ gamma
 
-        if (e.net$jerr != 0)
+        aenet <- cv.gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
+                                   lambda[[2]], pf = weights, pf2 = pf,
+                                   eps = delta, maxit = max(maxit, 1e6))
+
+        if (aenet$jerr != 0)
             stop("Error in gcdnet::gcdnet.")
-        i <- which.min(apply(stats::predict(ae.net, X.init), 2, mse))
 
-        coefs <- purrr::map(i.groups, ~ ae.net$beta[.x, i])
-        beta <- coefs[1:n]
-        eta  <- coefs[-(1:n)]
+        coefs <- stat::coef(aenet, s = aenet$lambda.min)
+        coefs <- purrr::map(i.groups, ~ aenet$beta[.x, i])
+        beta  <- coefs[1:n]
+        eta   <- coefs[-(1:n)]
+
         out <- higlasso_internal(Y.train, Xm.train, Xi.train, Z.train, beta,
                                  eta, lambda[[1]], lambda[[2]], sigma, maxit,
                                  delta)
