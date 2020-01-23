@@ -131,11 +131,11 @@ cv.higlasso <- function(Y, X, Z, method = "gglasso" ,lambda1 = NULL, lambda2 = N
     }
 
     cvm  <- purrr::reduce(purrr::map(cv.models, ~ .x$mse.test), `+`) / nfolds
-    cvsd <- purrr::reduce(purrr::map(cv.models, ~ .x$mse.test),~ .x + (.y - cvm) ^ 2)
-    cvsd <- sqrt(cvsd / nfolds - 1)
+    cvse <- purrr::reduce(purrr::map(cv.models, ~ .x$mse.test),~ .x + (.y - cvm) ^ 2)
+    cvse <- sqrt(cvse / nfolds - 1) / sqrt(nfolds)
 
     model$cvm  <- cvm
-    model$cvsd <- cvsd
+    model$cvse <- cvse
 
     model$mse.test <- NULL
     class(model) = "cv.higlsaso"
