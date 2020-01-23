@@ -177,34 +177,29 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     # those weights to 0
     pf <- c(rep(1, p), rep(0, ncol(Z.train)))
 
-    nu < - log(ncol(X.init) + ncol(Z.train)) / log(nrow(X.init))
-    gamma <- ceiling(2 * nu / (1 - nu))
+    nu <- log(p) / log(nrow(X.init))
+    gamma <- 2 # ceiling(2 * nu / (1 - nu))
 
     models <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
     {
-        enet <- cv.gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
+        enet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
                                   lambda[[2]], pf = pf, pf2 = pf, eps = delta,
                                   maxit = max(maxit, 1e6))
 
-        if (e.net$jerr != 0)
-            stop("Error in gcdnet::gcdnet.")
 
         # get the best scoring lambda from gcdnet and use that to generate
         # inital weights for the adpative elastic net
-
-        weights <- stats::coef(enet, s = enet$lambda.min)
-        weights <- 1 / abs(weights + 1 / nrow(X.init))
-        weights <- c(weights, rep(0, ncol(Z.train))) ^ gamma
-
-        aenet <- cv.gcdnet::gcdnet(X.init, Y.train, method = "ls", lambda2 =
+        i <- which.min(enet$cvm)
+        weights <- enet$gcdnet.fit$beta[1:p, i]
+        weights <- 1 / abs(weights + 1 / nrow(X.init)) ^ gamma
+        weights <- c(weights, rep(0, ncol(Z.train)))
+        aenet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
                                    lambda[[2]], pf = weights, pf2 = pf,
                                    eps = delta, maxit = max(maxit, 1e6))
 
-        if (aenet$jerr != 0)
-            stop("Error in gcdnet::gcdnet.")
 
-        coefs <- stat::coef(aenet, s = aenet$lambda.min)
-        coefs <- purrr::map(i.groups, ~ aenet$beta[.x, i])
+	i     <- which.min(aenet$cvm)
+        coefs <- purrr::map(i.groups, ~ aenet$gcdnet.fit$beta[.x, i])
         beta  <- coefs[1:n]
         eta   <- coefs[-(1:n)]
 
@@ -217,6 +212,7 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
         else
             names(out$beta) <- colnames(X.train)
 
+    	out$init <- unlist(coefs)
         out$degree <- degree
         out$lambda <- c(lambda[[1]], lambda[[2]])
         out$df = sum(purrr::map_lgl(c(out$beta, out$eta[j]), ~ any(.x != 0)))
