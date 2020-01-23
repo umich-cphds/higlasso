@@ -170,32 +170,25 @@ higlasso <- function(Y.train, X.train, Z.train, method = "gglasso", Y.test = NUL
         lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min), len = n.lambda2))
     }
 
-    p       <- ncol(X.init)
+    px       <- ncol(X.init)
+    pz       <- ncol(Z.train)
     X.init  <- cbind(X.init, Z.train)
+
+    if (method == "gglasso")
+        coefs <- initialise_higlasso(method, X.init, p, ncol(Z.train), Y.train,
+                                     lambda, delta, maxit, groups, i.groups)
 
     models <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
     {
-        coefs <- initialise_higlasso(method, X.init, p, ncol(Z.train), Y.train,
-                                     lambda, delta, maxit, groups, i.groups)
+        if (method == "aenet")
+            coefs <- initialise_higlasso(method, X.init, px, pz, Y.train,
+                                         lambda, delta, maxit, groups, i.groups)
 
         beta  <- coefs[1:n]
         eta   <- coefs[-(1:n)]
 
-        out <- higlasso_internal(Y.train, Xm.train, Xi.train, Z.train, beta,
-                                 eta, lambda[[1]], lambda[[2]], sigma, maxit,
-                                 delta)
-
-        if (is.null(colnames(X.train)))
-            names(out$beta) <- paste0("V", 1:length(Xm))
-        else
-            names(out$beta) <- colnames(X.train)
-
-    	out$init <- unlist(coefs)
-        out$degree <- degree
-        out$lambda <- c(lambda[[1]], lambda[[2]])
-        out$df = sum(purrr::map_lgl(c(out$beta, out$eta[j]), ~ any(.x != 0)))
-        class(out) <- "higlasso"
-        out
+        higlasso.fit(beta, eta, j, Y.train, Xm.train, Xi.train, Z.train,
+                     lambda[[1]], lambda[[2]], sigma, maxit, delta, degree)
     })
 
     # Calculate test error if given.
@@ -245,8 +238,8 @@ check.XZ <- function(XZ, Y)
 
 }
 
-initialise_higlasso <- function(method, X.init, px, pz, Y.train, lambda, delta, maxit,
-                                groups, i.groups)
+initialise_higlasso <- function(method, X.init, px, pz, Y.train, lambda, delta,
+                                maxit, groups, i.groups)
 {
 
     if (method == "aenet") {
@@ -276,4 +269,27 @@ initialise_higlasso <- function(method, X.init, px, pz, Y.train, lambda, delta, 
         i   <- which.min(fit$cvm)
         purrr::map(i.groups, ~ fit$gglasso.fit$beta[.x, i])
     }
+}
+
+
+
+higlasso.fit <- function(beta, eta, j, Y, Xm, Xi, Z, lambda1, lambda2, sigma,
+                         maxit, delta, degree)
+{
+    out <- higlasso_internal(Y, Xm, Xi, Z, beta, eta, lambda1, lambda2, sigma,
+                             maxit, delta)
+
+    if (is.null(colnames(X)))
+        names(out$beta) <- paste0("V", 1:length(Xm))
+    else
+        names(out$beta) <- colnames(X)
+
+    out$lambda <- c(lambda1, lambda2)
+    out$df = sum(purrr::map_lgl(c(out$beta, out$eta[j]), ~ any(.x != 0)))
+    out$init <- unlist(c(beta, eta))
+    out$degree <- degree
+
+    class(out) <- "higlasso.fit"
+
+    out
 }

@@ -4,10 +4,10 @@
 \alias{higlasso}
 \title{Hierarchical Integrative Group LASSO}
 \usage{
-higlasso(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
-  Z.test = NULL, lambda1 = NULL, lambda2 = NULL, n.lambda1 = 10,
-  n.lambda2 = 10, lambda.min.ratio = 0.1, sigma = 1, degree = 3,
-  maxit = 5000, delta = 1e-05)
+higlasso(Y.train, X.train, Z.train, method = "gglasso", Y.test = NULL,
+  X.test = NULL, Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
+  n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = 0.1,
+  sigma = 1, degree = 3, maxit = 5000, delta = 1e-05)
 }
 \arguments{
 \item{Y.train}{A length n numeric response vector}

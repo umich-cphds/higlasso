@@ -263,7 +263,7 @@ double penalized_likelihood(vec residuals, field <vec> beta, field <vec> eta,
         beta_reg += exp(-norm(beta(j), "inf") / sigma) * norm(beta(j));
 
     double eta_reg = 0.0;
-    for (uword k = 0; k < beta.n_elem; ++ k)
+    for (uword k = 0; k < beta.n_elem; ++k)
         for (uword j = 0; j < k; ++j)
             eta_reg += exp(-norm(eta(j, k), "inf") / sigma) * norm(eta(j, k));
 
@@ -324,6 +324,16 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
     if (it >= maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= delta)
         Rcpp::warning("'maxit' reached without convergence: %f > %f\n",
         (pen_lik0 - pen_lik1) / pen_lik0, delta);
+
+    // clean up betas and etas
+    for (uword j = 0; j < beta.n_elem; ++j)
+        if (norm(beta(j), "inf") < 10 * EPSILON)
+                beta(j).fill(0);
+
+    for (uword k = 0; k < beta.n_elem; ++k)
+        for (uword j = 0; j < k; ++j)
+            if (norm(eta(j, k), "inf") < 10 * EPSILON)
+                eta(j, k).fill(0);
 
     double mse = dot(residuals, residuals) / residuals.n_elem;
     return Rcpp::List::create(Rcpp::Named("alpha") = alpha,

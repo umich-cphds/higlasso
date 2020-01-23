@@ -41,9 +41,9 @@ print.higlasso.grid <- function(x, ...)
 #' @param x An object of type 'higlasso'
 #' @param ... Additional parameters to pass onto print
 #' @export
-print.higlasso <- function(x, ...)
+print.higlasso.fit <- function(x, ...)
 {
-    if (class(x) != "higlasso")
+    if (class(x) != "higlasso.fit")
         stop("'object' is not a higlasso fit.")
 
     sum <- summary.higlasso(x)
@@ -65,7 +65,7 @@ print.higlasso <- function(x, ...)
 #' @export
 summary.higlasso <- function(object, ...)
 {
-    if (class(object) != "higlasso")
+    if (class(object) != "higlasso.fit")
         stop("'object' is not a higlasso fit.")
 
     main <- sapply(object$beta, function(b) ifelse(any(b != 0), 1, 0))
@@ -90,9 +90,9 @@ summary.higlasso <- function(object, ...)
 #'     new Z. For experts only.
 #' @param ... Additonal parameters to pass on
 #' @export
-predict.higlasso <- function(object, newdata, ...)
+predict.higlasso.fit <- function(object, newdata, ...)
 {
-    if (class(object) != "higlasso")
+    if (class(object) != "higlasso.fit")
         stop("'object' is not a higlasso fit.")
     n <- length(object$beta)
     beta <- object$beta

@@ -77,9 +77,6 @@ cv.higlasso <- function(Y, X, Z, method = "gglasso" ,lambda1 = NULL, lambda2 = N
                         nfolds = 10, foldid = NULL, sigma = 1, degree = 3,
                         maxit = 5000, delta = 1e-5)
 {
-    check.Y(Y)
-    check.XZ(X, Y)
-    check.XZ(Z, Y)
 
     if (!is.numeric(sigma) || sigma < 0)
         stop("'sigma' must be a nonnegative number.")
@@ -95,6 +92,11 @@ cv.higlasso <- function(Y, X, Z, method = "gglasso" ,lambda1 = NULL, lambda2 = N
     if (!is.numeric(delta) || delta <= 0)
         stop("'delta' should be a postive number.")
 
+    fit <- higlasso(Y, X, Z, method = method, lambda1 = lambda1, lambda2 =
+                    lambda2, n.lambda1 = n.lambda1, n.lambda2 = n.lambda2,
+                    lambda.min.ratio = lambda.min.ratio, sigma = sigma,
+                    degree = degree, maxit = maxit, delta = delta)
+
     n <- length(Y)
     if (!is.null(foldid)) {
         stop("Not implemented")
@@ -104,13 +106,9 @@ cv.higlasso <- function(Y, X, Z, method = "gglasso" ,lambda1 = NULL, lambda2 = N
       folds <- c(rep(1:nfolds, p), 1:r)
       folds <- sample(folds, n)
     }
-    model <- higlasso(Y, X, Z, lambda1 = lambda1, lambda2 = lambda2,
-                      n.lambda1 = n.lambda1, n.lambda2 = n.lambda2,
-                      lambda.min.ratio = lambda.min.ratio, sigma = sigma,
-                      degree = degree, maxit = maxit, delta = delta)
 
-    lambda1   <- unique(model$lambda[, 1])
-    lambda2   <- unique(model$lambda[, 2])
+    lambda1   <- unique(fit$lambda[, 1])
+    lambda2   <- unique(fit$lambda[, 2])
     cv.models <- vector("list", nfolds)
     for (i in 1:nfolds) {
         Y.train <- Y[folds != i]
@@ -134,10 +132,8 @@ cv.higlasso <- function(Y, X, Z, method = "gglasso" ,lambda1 = NULL, lambda2 = N
     cvse <- purrr::reduce(purrr::map(cv.models, ~ .x$mse.test),~ .x + (.y - cvm) ^ 2)
     cvse <- sqrt(cvse / nfolds - 1) / sqrt(nfolds)
 
-    model$cvm  <- cvm
-    model$cvse <- cvse
-
-    model$mse.test <- NULL
-    class(model) = "cv.higlsaso"
-    model
+    fit$cvse <- cvse
+    fit$cvm  <- cvm
+    structure(list(cvm = cvm, cvse = cvse, lambda1 = lambda1, lambda2 = lambda2,
+                   higlasso.fit = fit), class = "cv.higlasso")
 }
