@@ -72,7 +72,7 @@
 #'                          X.test = X.test, Z.test = Z.test)
 #' }
 #' @export
-cv.higlasso <- function(Y, X, Z, lambda1 = NULL, lambda2 = NULL,
+cv.higlasso <- function(Y, X, Z, method = "gglasso" ,lambda1 = NULL, lambda2 = NULL,
                         n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .1,
                         nfolds = 10, foldid = NULL, sigma = 1, degree = 3,
                         maxit = 5000, delta = 1e-5)
@@ -120,13 +120,14 @@ cv.higlasso <- function(Y, X, Z, lambda1 = NULL, lambda2 = NULL,
         Z.train <- Z[folds != i, , drop = F]
         Z.test  <- Z[folds == i, , drop = F]
 
-        cv.models[[i]] <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
-                                   X.test = X.test, Z.test = Z.test, lambda1 =
-                                   lambda1, lambda2 = lambda2, n.lambda1 =
-                                   n.lambda1, n.lambda2 = n.lambda2,
-                                   lambda.min.ratio = lambda.min.ratio,
-                                   sigma = sigma, degree = degree, maxit =
-                                   maxit, delta = delta)
+        cv.models[[i]] <- higlasso(Y.train, X.train, Z.train, method = method,
+                                   Y.test = Y.test, X.test = X.test,
+                                   Z.test = Z.test, lambda1 = lambda1,
+                                   lambda2 = lambda2, n.lambda1 = n.lambda1,
+                                   n.lambda2 = n.lambda2, lambda.min.ratio =
+                                   lambda.min.ratio, sigma = sigma,
+                                   degree = degree, maxit = maxit,
+                                   delta = delta)
     }
 
     cvm  <- purrr::reduce(purrr::map(cv.models, ~ .x$mse.test), `+`) / nfolds

@@ -71,10 +71,10 @@
 #'                          X.test = X.test, Z.test = Z.test)
 #' }
 #' @export
-higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
-                        Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
-                        n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .1,
-                        sigma = 1, degree = 3, maxit = 5000, delta = 1e-5)
+higlasso <- function(Y.train, X.train, Z.train, method = "gglasso", Y.test = NULL,
+                     X.test = NULL, Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
+                     n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .1,
+                     sigma = 1, degree = 3, maxit = 5000, delta = 1e-5)
 {
     check.Y(Y.train)
     if (!is.null(Y.test))
@@ -173,33 +173,11 @@ higlasso <- function(Y.train, X.train, Z.train, Y.test = NULL, X.test = NULL,
     p       <- ncol(X.init)
     X.init  <- cbind(X.init, Z.train)
 
-    # penalty factor for enet. Z contains unregualrized coefficents so we set
-    # those weights to 0
-    pf <- c(rep(1, p), rep(0, ncol(Z.train)))
-
-    nu <- log(p) / log(nrow(X.init))
-    gamma <- 2 # ceiling(2 * nu / (1 - nu))
-
     models <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
     {
-        enet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
-                                  lambda[[2]], pf = pf, pf2 = pf, eps = delta,
-                                  maxit = max(maxit, 1e6))
+        coefs <- initialise_higlasso(method, X.init, p, ncol(Z.train), Y.train,
+                                     lambda, delta, maxit, groups, i.groups)
 
-
-        # get the best scoring lambda from gcdnet and use that to generate
-        # inital weights for the adpative elastic net
-        i <- which.min(enet$cvm)
-        weights <- enet$gcdnet.fit$beta[1:p, i]
-        weights <- 1 / abs(weights + 1 / nrow(X.init)) ^ gamma
-        weights <- c(weights, rep(0, ncol(Z.train)))
-        aenet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
-                                   lambda[[2]], pf = weights, pf2 = pf,
-                                   eps = delta, maxit = max(maxit, 1e6))
-
-
-	i     <- which.min(aenet$cvm)
-        coefs <- purrr::map(i.groups, ~ aenet$gcdnet.fit$beta[.x, i])
         beta  <- coefs[1:n]
         eta   <- coefs[-(1:n)]
 
@@ -265,4 +243,37 @@ check.XZ <- function(XZ, Y)
     if (any(is.na(XZ)))
         stop("'", name.XZ, "' cannot contain missing values.")
 
+}
+
+initialise_higlasso <- function(method, X.init, px, pz, Y.train, lambda, delta, maxit,
+                                groups, i.groups)
+{
+
+    if (method == "aenet") {
+        # penalty factor for enet. Z contains unregularized coefficents so we set
+        # those weights to 0
+        pf <- c(rep(1, px), rep(0, pz))
+
+        enet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
+        lambda[[2]], pf = pf, pf2 = pf, eps = delta,
+        maxit = max(maxit, 1e6))
+
+        # get the best scoring lambda from gcdnet and use that to generate
+        # inital weights for the adpative elastic net
+        i <- which.min(enet$cvm)
+        weights <- enet$gcdnet.fit$beta[1:px, i]
+        weights <- 1 / abs(weights + 1 / nrow(X.init)) ^ 2
+        weights <- c(weights, rep(0, pz))
+        aenet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
+        lambda[[2]], pf = weights, pf2 = pf,
+        eps = delta, maxit = max(maxit, 1e6))
+
+        i <- which.min(aenet$cvm)
+        purrr::map(i.groups, ~ aenet$gcdnet.fit$beta[.x, i])
+    } else {
+        groups <- c(groups, seq(pz) + max(groups))
+        fit <- gglasso::cv.gglasso(X.init, Y.train, group = groups)
+        i   <- which.min(fit$cvm)
+        purrr::map(i.groups, ~ fit$gglasso.fit$beta[.x, i])
+    }
 }

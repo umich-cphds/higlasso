@@ -29,6 +29,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
 Imports:
     gcdnet,
+    gglasso,
     purrr,
     splines,
     Rcpp
