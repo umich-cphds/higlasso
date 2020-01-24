@@ -188,7 +188,7 @@ higlasso <- function(Y.train, X.train, Z.train, method = "gglasso", Y.test = NUL
         eta   <- coefs[-(1:n)]
 
         higlasso.fit(beta, eta, j, Y.train, Xm.train, Xi.train, Z.train,
-                     lambda[[1]], lambda[[2]], sigma, maxit, delta, degree)
+                     lambda[[1]], lambda[[2]], sigma, maxit, delta, degree, X.train)
     })
 
     # Calculate test error if given.
@@ -274,7 +274,7 @@ initialise_higlasso <- function(method, X.init, px, pz, Y.train, lambda, delta,
 
 
 higlasso.fit <- function(beta, eta, j, Y, Xm, Xi, Z, lambda1, lambda2, sigma,
-                         maxit, delta, degree)
+                         maxit, delta, degree, X)
 {
     out <- higlasso_internal(Y, Xm, Xi, Z, beta, eta, lambda1, lambda2, sigma,
                              maxit, delta)
