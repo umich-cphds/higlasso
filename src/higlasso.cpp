@@ -319,24 +319,30 @@ Rcpp::List higlasso_internal(arma::vec Y, arma::field <arma::mat> Xm,
 
         pen_lik1 = penalized_likelihood(residuals, beta, eta, sigma, l1, l2);
         // check penalized likelihood
-    } while (it++ < maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= delta);
+    } while (it++ < maxit && (pen_lik0 - pen_lik1) >= delta);
 
     if (it >= maxit && (pen_lik0 - pen_lik1) / pen_lik0 >= delta)
         Rcpp::warning("'maxit' reached without convergence: %f > %f\n",
         (pen_lik0 - pen_lik1) / pen_lik0, delta);
 
-    // clean up betas and etas
+    // clean up betas
     for (uword j = 0; j < beta.n_elem; ++j)
         if (norm(beta(j), "inf") < 10 * EPSILON)
-                beta(j).fill(0);
+            beta(j).fill(0);
 
-    for (uword k = 0; k < beta.n_elem; ++k)
-        for (uword j = 0; j < k; ++j)
+    // clean up etas and convert them to gammas
+    for (uword k = 0; k < beta.n_elem; ++k) {
+        for (uword j = 0; j < k; ++j) {
             if (norm(eta(j, k), "inf") < 10 * EPSILON)
                 eta(j, k).fill(0);
+            else
+                eta(j, k) = eta(j, k) % kron(beta(j), beta(k));
+        }
+
+    }
 
     double mse = dot(residuals, residuals) / residuals.n_elem;
     return Rcpp::List::create(Rcpp::Named("alpha") = alpha,
-        Rcpp::Named("beta") = beta, Rcpp::Named("eta") = eta,
+        Rcpp::Named("beta") = beta, Rcpp::Named("gamma") = eta,
         Rcpp::Named("mse") = mse);
 }

@@ -1,20 +1,21 @@
 #' Hierarchical Integrative Group LASSO
 #'
-#' HiGLASSO is a regularization method designed to detect non linear
-#' interactions between variables, particulary exposures in environmental
-#' health studies.
-#' We have designed \code{higlasso} to
+#' HiGLASSO is a regularization based selection method designed to detect
+#' non-linear interactions between variables, particulary exposures in
+#' environmental health studies.
+#'
+#' We have designed HiGLASSO to
 #' \itemize{
 #'   \item Impose strong heredity constraints on two-way interaction effects
 #'       (hierarchical).
 #'   \item Incorporate adaptive weights without necessitating initial
-#'       coefficient estimates.
+#'       coefficient estimates (integrative).
 #'   \item Induce sparsity for variable selection while respecting group
 #'       structure (group LASSO).
 #' }
 #'
 #' The objective function \code{higlasso} solves is
-#' % Renders the objective function as html in Rstudio and in raw tex otherwise.
+#'
 #' \ifelse{html}{\out{<center> argmin &beta;<sub>j</sub>, &eta;<sub>jj'</sub>
 #' &frac12;|| Y - X<sub>j</sub> &beta;<sub>j</sub> -
 #' X<sub>jj'</sub> (&eta;<sub>jj'</sub> &odot; &beta;<sub>j</sub>
@@ -25,77 +26,68 @@
 #' \deqn{argmin \\beta_j, \\eta_{jj'} \frac{1}{2}|| Y - X_j \\beta_j}
 #' \deqn{- X_{jj'} (\\eta_{jj'} \odot \\beta_j \otimes \\beta_{j'})||^2}
 #' \deqn{+ \\lambda_1 w_j ||\\beta_j|| + \\lambda_2 w_{jj'} || \\eta_{jj'}||}}
-#' @param Y.train A length n numeric response vector
-#' @param X.train A n x p numeric matrix
-#' @param Z.train A n x m numeric matrix
-#' @param Y.test A length n' numeric response vector
-#' @param X.test A n' x p numeric matrix
-#' @param Z.test A n' x m numeric matrix
+#' @param Y A length n numeric response vector
+#' @param X A n x p numeric matrix of covariates to basis expand
+#' @param Z A n x m numeric matrix of non basis expanded and non
+#'     regularized covariates
+#' @param method Type of initialization to use. Possible choices are "gglasso"
+#'     for group LASSO and "aenet" for adaptive elastic net. Default is "aenet"
 #' @param lambda1 A numeric vector of main effect penalties on which to tune
-#'     By default, \code{lambda1 = NULL} and generates a sequence (length
-#'     \code{n.lambda1}) of lambda1s based off of the data and
+#'     By default, \code{lambda1 = NULL} and higlasso generates a length
+#'     \code{nlambda1} sequence of lambda1s based off of the data and
 #'     \code{min.lambda.ratio}
 #' @param lambda2 A numeric vector of interaction effects penalties on which to
 #'     tune. By default, \code{lambda2 = NULL} and generates a sequence (length
-#'     \code{n.lambda2}) of lambda2s based off of the data and
+#'     \code{nlambda2}) of lambda2s based off of the data and
 #'     \code{min.lambda.ratio}
-#' @param n.lambda1 The number of lambda1 values to generate. Default is 10,
+#' @param nlambda1 The number of lambda1 values to generate. Default is 10,
 #'     minimum is 2. If \code{lambda1 != NULL}, this parameter is ignored
-#' @param n.lambda2 The number of lambda2 values to generate. Default is 10,
+#' @param nlambda2 The number of lambda2 values to generate. Default is 10,
 #'     minimum is 2. If \code{lambda2 != NULL}, this parameter is ignored
-#' @param lambda.min.ratio Ratio that calculates min lambda from max lambda
+#' @param lambda.min.ratio Ratio that calculates min lambda from max lambda.
+#'     Ignored if 'lambda1' or 'lambda2' is non NULL. Default is 0.05
 #' @param sigma Scale parameter for integrative weights. Technically a third
 #'     tuning parameter but defaults to 1 for computational tractibility
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
 #' @param maxit Maximum number of iterations. Default is 5000
-#' @param delta Tolerance for convergence. Defaults to 1e-5
+#' @param tol Tolerance for convergence. Default is 1e-5
 #' @author Alexander Rix
 #' @references TODO
-#' @return TODO
+#' @return
+#' An object of type "higlasso" with 4 elements:
+#' \describe{
+#'     \item{lambda}{An \code{nlambda1 x nlambda2 x 2} array containing each
+#'                   pair \code{(lambda1, lambda2)} pair.}
+#'     \item{selected}{An \code{nlambda1 x nlambda2 x ncol(X)} array containing
+#'                     higlasso's selections for each lambda pair.}
+#'     \item{df}{The number of nonzero selections for each lambda pair.}
+#'     \item{call}{The call that generated the output.}
+#' }
 #' @examples
 #' library(higlasso)
 #'
-#' X <- higlasso.df[, paste0("X", 1:10)]
-#' Y <- higlasso.df$y
+#' X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
+#' Y <- higlasso.df$Y
+#' Z <- matrix(1, nrow(X))
 #'
-#' Y.train <- Y[1:400]
-#' X.train <- as.matrix(X[1:400,])
-#' Z.train <- matrix(1, 400)
-#'
-#' X.test <- as.matrix(X[401:500,])
-#' Y.test  <- Y[401:500]
-#' Z.test  <- matrix(1, 100)
 #' \dontrun{
 #' # This can take a bit of time
-#' higlasso.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
-#'                          X.test = X.test, Z.test = Z.test)
+#' higlasso.fit <- higlasso(Y, X, Z)
 #' }
 #' @export
-higlasso <- function(Y.train, X.train, Z.train, method = "gglasso", Y.test = NULL,
-                     X.test = NULL, Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
-                     n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = .1,
-                     sigma = 1, degree = 3, maxit = 5000, delta = 1e-5)
+higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
+                     lambda2 = NULL, nlambda1 = 10, nlambda2 = 10,
+                     lambda.min.ratio = .05, sigma = 1, degree = 3,
+                     maxit = 5000, tol = 1e-5)
 {
-    check.Y(Y.train)
-    if (!is.null(Y.test))
-        check.Y(Y.test)
 
-    check.XZ(X.train, Y.train)
-    if (!is.null(X.test)) {
-        check.XZ(X.test, Y.test)
-        if (ncol(X.test) != ncol(X.train))
-            stop("'X.test' does not have the same number of columns as ",
-                 "'X.train'.")
-    }
+    call <- match.call()
 
-    check.XZ(Z.train, Y.train)
-    if (!is.null(Z.test)) {
-        check.XZ(Z.test, Y.test)
-        if (ncol(Z.test) != ncol(Z.train))
-            stop("'Z.test' does not have the same number of columns as ",
-                 "'Z.train'.")
-    }
+    check.Y(Y)
+    check.XZ(X, Y)
+    check.XZ(Z, Y)
 
+    method <- match.arg(method)
     if (!is.numeric(sigma) || sigma < 0)
         stop("'sigma' must be a nonnegative number.")
     if (length(sigma) > 1)
@@ -107,189 +99,135 @@ higlasso <- function(Y.train, X.train, Z.train, method = "gglasso", Y.test = NUL
     if (!is.numeric(maxit) || maxit < 1)
         stop("'maxit' should be an integer >= 1.")
 
-    if (!is.numeric(delta) || delta <= 0)
-        stop("'delta' should be a postive number.")
+    if (!is.numeric(tol) || tol <= 0)
+        stop("'tol' should be a postive number.")
 
     # get number of main effect variables.
 
-    matrices <- generate_design_matrices(rbind(X.train, X.test), degree)
+    matrices <- generate_design_matrices(X, degree)
 
     Xm <- matrices$Xm
     Xi <- matrices$Xi
-    p.main <- sum(purrr::map_dbl(Xm, function(Xj) ncol(Xj)))
-    j <- purrr::map_lgl(Xi, ~ ncol(.x) > 0)
+    X.xp <- matrices$X.xp
+    groups <- matrices$groups
+    igroups <- matrices$igroups
 
-    Xm.train <- purrr::map(Xm, function(Xj) Xj[1:nrow(X.train), ])
-    Xm.test  <- purrr::map(Xm, function(Xj) Xj[-(1:nrow(X.train)), ])
-
-    Xi.train <- lapply(Xi, function(x)
-    {
-        if (ncol(x) > 0)
-            x[1:nrow(X.train),]
-        else
-            x
-    })
-    Xi.test <- lapply(Xi, function(x)
-    {
-        if (ncol(x) > 0)
-            x[-(1:nrow(X.train)),]
-        else
-            x
-    })
-
-    n <- length(Xm.train)
-    groups <- purrr::flatten_dbl(c(
-        purrr::imap(Xm.train,    function(Xm.i, i) rep(i, ncol(Xm.i))),
-        purrr::imap(Xi.train[j], function(Xi.i, i) rep(n + i, ncol(Xi.i)))
-    ))
-
-    # construct "inverse" of groups
-    i.groups <- vector("list", max(groups))
-    purrr::iwalk(groups, function(g, i) i.groups[[g]] <<- c(i.groups[[g]], i))
-
-    X.init <- do.call("cbind", c(Xm.train, Xi.train[j]))
+    # X.xp <- do.call("cbind", c(unname(Xm), Xi[j]))
 
     # generate lambda sequences if user does not pre-specify them
-    YtX <- abs(Y.train %*% X.init)[1,] / nrow(X.init)
+    p <- ncol(X) * degree
+    YtX <- abs(Y %*% X.xp)[1,] / nrow(X.xp)
     if (!is.null(lambda1)) {
         if (!is.numeric(lambda1) || any(lambda1 <= 0))
             stop("'lambda1' must be a nonnegative numeric array.")
+        nlambda1 <- length(lambda1)
     } else {
-        lambda1.max <- max(YtX[1:p.main])
+        lambda1.max <- max(YtX[1:p])
         lambda1.min <- lambda.min.ratio * lambda1.max
         lambda1 <- exp(seq(log(lambda1.max), log(lambda1.min), length.out =
-                           n.lambda1))
+                           nlambda1))
     }
 
     if (!is.null(lambda2)) {
         if (!is.numeric(lambda2) || any(lambda2 <= 0))
             stop("'lambda2' must be a nonnegative numeric array.")
+        nlambda2 <- length(lambda2)
     } else {
-        lambda2.max <- max(YtX[-(1:p.main)])
+        lambda2.max <- max(YtX[-(1:p)])
         lambda2.min <- lambda.min.ratio * lambda2.max
-        lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min), len = n.lambda2))
+        lambda2 <- exp(seq(log(lambda2.max), log(lambda2.min), len = nlambda2))
     }
 
-    px       <- ncol(X.init)
-    pz       <- ncol(Z.train)
-    X.init  <- cbind(X.init, Z.train)
+    px       <- ncol(X.xp)
+    pz       <- ncol(Z)
+    X.xp  <- cbind(X.xp, Z)
+
+    fit <- higlasso.fit(Y, Xm, Xi, Z, X.xp, px, pz, method, lambda1, lambda2,
+                        sigma, groups, igroups, maxit, tol, call)
+
+    fit$coef <- NULL
+
+    return(fit)
+}
+
+initialise_gglasso <- function(X.xp, pz, Y, tol, maxit, groups, igroups)
+{
+    groups <- c(groups, seq(pz) + max(groups))
+    fit <- gglasso::cv.gglasso(X.xp, Y, group = groups)
+    i   <- which.min(fit$cvm)
+    purrr::map(igroups, ~ fit$gglasso.fit$beta[.x, i])
+}
+
+
+initialise_aenet <- function(X.xp, px, pz, Y, lambda2, tol, maxit, groups,
+                             igroups)
+{
+    # penalty factor for enet. Z contains unregularized coefficents so we set
+    # those weights to 0
+    pf <- c(rep(1, px), rep(0, pz))
+
+    enet <- gcdnet::cv.gcdnet(X.xp, Y, method = "ls", lambda2 = lambda2,
+                              pf = pf, pf2 = pf, eps = tol,
+                              maxit = max(maxit, 1e6))
+
+    # get the best scoring lambda from gcdnet and use that to generate
+    # inital weights for the adpative elastic net
+    i <- which.min(enet$cvm)
+    weights <- enet$gcdnet.fit$beta[1:px, i]
+    weights <- 1 / abs(weights + 1 / nrow(X.xp)) ^ 2
+    weights <- c(weights, rep(0, pz))
+    aenet <- gcdnet::cv.gcdnet(X.xp, Y, method = "ls", lambda2 = lambda2,
+                               pf = weights, pf2 = pf, eps = tol,
+                               maxit = max(maxit, 1e6))
+
+    i <- which.min(aenet$cvm)
+    purrr::map(igroups, ~ aenet$gcdnet.fit$beta[.x, i])
+}
+
+higlasso.fit <- function(Y, Xm, Xi, Z, X.xp, px, pz, method, lambda1, lambda2,
+                         sigma, groups, igroups, maxit, tol, call)
+{
+    ngroups  <- length(Xm)
+    nlambda1 <- length(lambda1)
+    nlambda2 <- length(lambda2)
+
+    lambda   <- array(0, c(nlambda1, nlambda2, 2))
+    coef     <- array(0, c(nlambda1, nlambda2, ncol(X.xp)))
+    selected <- array(0, c(nlambda1, nlambda2, choose(ngroups, 2) + ngroups))
+
+    nm <- names(Xm)
+    k   <- purrr::map_lgl(Xi, ~ ncol(.x) > 0)
+    nmi <- purrr::map_chr(purrr::cross2(nm, nm),
+                          ~ paste(.x[[1]], .x[[2]], sep = "."))
+
+    dimnames(selected) <- list(NULL, NULL, c(nm, nmi[k]))
+    df <- matrix(0, nlambda1, nlambda2)
+
 
     if (method == "gglasso")
-        coefs <- initialise_higlasso(method, X.init, p, ncol(Z.train), Y.train,
-                                     lambda, delta, maxit, groups, i.groups)
+        start <- initialise_gglasso(X.xp, pz, Y, tol, maxit, groups, igroups)
 
-    models <- purrr::map(purrr::cross2(lambda1, lambda2), function(lambda)
-    {
+    for (j in seq_along(lambda2)) {
         if (method == "aenet")
-            coefs <- initialise_higlasso(method, X.init, px, pz, Y.train,
-                                         lambda, delta, maxit, groups, i.groups)
+            start <- initialise_aenet(X.xp, px, pz, Y, lambda2[j], tol, maxit,
+                                      groups, igroups)
 
-        beta  <- coefs[1:n]
-        eta   <- coefs[-(1:n)]
+        beta  <- start[1:ngroups]
+        eta   <- start[-(1:ngroups)]
+        for (i in seq_along(lambda1)) {
 
-        higlasso.fit(beta, eta, j, Y.train, Xm.train, Xi.train, Z.train,
-                     lambda[[1]], lambda[[2]], sigma, maxit, delta, degree, X.train)
-    })
+            fit <- higlasso_internal(Y, Xm, Xi, Z, beta, eta, lambda1[i],
+                                     lambda2[j], sigma, maxit, tol)
 
-    # Calculate test error if given.
-    if (!is.null(Y.test) && !is.null(X.test) && !is.null(Z.test)) {
-        newdata     <- list(Xm.test, Xi.test, Z.test)
-        predictions <- purrr::map(models, stats::predict, newdata = newdata)
-        mse.test    <- purrr::map_dbl(predictions, ~ mean((.x - Y.test) ^ 2))
-    } else {
-        mse.test <- rep(NA, length(models))
+
+            lambda[i, j,]   <- c(lambda1[i], lambda2[j])
+            coef[i, j, ] <- unlist(c(fit$beta, fit$gamma[k], fit$alpha))
+            selected[i, j,] <- purrr::map_lgl(c(fit$beta, fit$gamma[k]),
+                                              ~ any(.x != 0))
+            df[i, j]        <- sum(selected[i, j,])
+        }
     }
 
-    out <- purrr::reduce(models, .init = list(lambda = NULL, mse.train = NULL,
-                         mse.test = mse.test),
-                         function(list, model)
-                         {
-                             list(lambda = rbind(list$lambda, model$lambda),
-                                  mse.train = c(list$mse.train, model$mse),
-                                  mse.test = list$mse.test)
-                         }
-    )
-    out$model  <- models
-    class(out) <- "higlasso.grid"
-    out
-}
-
-# Type checking functions to save space.
-check.Y <- function(Y)
-{
-    name <- deparse(substitute(Y))
-    if (!is.vector(Y) || !is.numeric(Y))
-        stop("'", name ,"' must be a numeric vector.")
-        if (any(is.na(Y)))
-        stop("'", name, "' cannot contain missing values.")
-}
-
-check.XZ <- function(XZ, Y)
-{
-    name.XZ <- deparse(substitute(XZ))
-    name.Y <- deparse(substitute(Y))
-    if (!is.matrix(XZ) || !is.numeric(XZ))
-        stop("'", name.XZ, "' must be a numeric matrix.")
-    if (nrow(XZ) != length(Y))
-        stop("The number of rows of '", name.XZ, "' does not match the length",
-             " of '", name.Y, "'.")
-    if (any(is.na(XZ)))
-        stop("'", name.XZ, "' cannot contain missing values.")
-
-}
-
-initialise_higlasso <- function(method, X.init, px, pz, Y.train, lambda, delta,
-                                maxit, groups, i.groups)
-{
-
-    if (method == "aenet") {
-        # penalty factor for enet. Z contains unregularized coefficents so we set
-        # those weights to 0
-        pf <- c(rep(1, px), rep(0, pz))
-
-        enet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
-        lambda[[2]], pf = pf, pf2 = pf, eps = delta,
-        maxit = max(maxit, 1e6))
-
-        # get the best scoring lambda from gcdnet and use that to generate
-        # inital weights for the adpative elastic net
-        i <- which.min(enet$cvm)
-        weights <- enet$gcdnet.fit$beta[1:px, i]
-        weights <- 1 / abs(weights + 1 / nrow(X.init)) ^ 2
-        weights <- c(weights, rep(0, pz))
-        aenet <- gcdnet::cv.gcdnet(X.init, Y.train, method = "ls", lambda2 =
-        lambda[[2]], pf = weights, pf2 = pf,
-        eps = delta, maxit = max(maxit, 1e6))
-
-        i <- which.min(aenet$cvm)
-        purrr::map(i.groups, ~ aenet$gcdnet.fit$beta[.x, i])
-    } else {
-        groups <- c(groups, seq(pz) + max(groups))
-        fit <- gglasso::cv.gglasso(X.init, Y.train, group = groups)
-        i   <- which.min(fit$cvm)
-        purrr::map(i.groups, ~ fit$gglasso.fit$beta[.x, i])
-    }
-}
-
-
-
-higlasso.fit <- function(beta, eta, j, Y, Xm, Xi, Z, lambda1, lambda2, sigma,
-                         maxit, delta, degree, X)
-{
-    out <- higlasso_internal(Y, Xm, Xi, Z, beta, eta, lambda1, lambda2, sigma,
-                             maxit, delta)
-
-    if (is.null(colnames(X)))
-        names(out$beta) <- paste0("V", 1:length(Xm))
-    else
-        names(out$beta) <- colnames(X)
-
-    out$lambda <- c(lambda1, lambda2)
-    out$df = sum(purrr::map_lgl(c(out$beta, out$eta[j]), ~ any(.x != 0)))
-    out$init <- unlist(c(beta, eta))
-    out$degree <- degree
-
-    class(out) <- "higlasso.fit"
-
-    out
+    structure(list(lambda = lambda, coef = coef, selected = selected,
+                   df = df, call = call), class = "higlasso")
 }
