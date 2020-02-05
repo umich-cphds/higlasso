@@ -4,41 +4,51 @@
 \alias{higlasso}
 \title{Hierarchical Integrative Group LASSO}
 \usage{
-higlasso(Y.train, X.train, Z.train, method = "gglasso", Y.test = NULL,
-  X.test = NULL, Z.test = NULL, lambda1 = NULL, lambda2 = NULL,
-  n.lambda1 = 10, n.lambda2 = 10, lambda.min.ratio = 0.1,
-  sigma = 1, degree = 3, maxit = 5000, delta = 1e-05)
+higlasso(
+  Y,
+  X,
+  Z,
+  method = c("aenet", "gglasso"),
+  lambda1 = NULL,
+  lambda2 = NULL,
+  nlambda1 = 10,
+  nlambda2 = 10,
+  lambda.min.ratio = 0.05,
+  sigma = 1,
+  degree = 3,
+  maxit = 5000,
+  tol = 1e-05
+)
 }
 \arguments{
-\item{Y.train}{A length n numeric response vector}
+\item{Y}{A length n numeric response vector}
 
-\item{X.train}{A n x p numeric matrix}
+\item{X}{A n x p numeric matrix of covariates to basis expand}
 
-\item{Z.train}{A n x m numeric matrix}
+\item{Z}{A n x m numeric matrix of non basis expanded and non
+regularized covariates}
 
-\item{Y.test}{A length n' numeric response vector}
-
-\item{X.test}{A n' x p numeric matrix}
-
-\item{Z.test}{A n' x m numeric matrix}
+\item{method}{Type of initialization to use. Possible choices are "gglasso"
+for group LASSO and "aenet" for adaptive elastic net. Default is "aenet"}
 
 \item{lambda1}{A numeric vector of main effect penalties on which to tune
-By default, \code{lambda1 = NULL} and generates a sequence (length
-\code{n.lambda1}) of lambda1s based off of the data and
+By default, \code{lambda1 = NULL} and higlasso generates a length
+\code{nlambda1} sequence of lambda1s based off of the data and
 \code{min.lambda.ratio}}
 
 \item{lambda2}{A numeric vector of interaction effects penalties on which to
 tune. By default, \code{lambda2 = NULL} and generates a sequence (length
-\code{n.lambda2}) of lambda2s based off of the data and
+\code{nlambda2}) of lambda2s based off of the data and
 \code{min.lambda.ratio}}
 
-\item{n.lambda1}{The number of lambda1 values to generate. Default is 10,
+\item{nlambda1}{The number of lambda1 values to generate. Default is 10,
 minimum is 2. If \code{lambda1 != NULL}, this parameter is ignored}
 
-\item{n.lambda2}{The number of lambda2 values to generate. Default is 10,
+\item{nlambda2}{The number of lambda2 values to generate. Default is 10,
 minimum is 2. If \code{lambda2 != NULL}, this parameter is ignored}
 
-\item{lambda.min.ratio}{Ratio that calculates min lambda from max lambda}
+\item{lambda.min.ratio}{Ratio that calculates min lambda from max lambda.
+Ignored if 'lambda1' or 'lambda2' is non NULL. Default is 0.05}
 
 \item{sigma}{Scale parameter for integrative weights. Technically a third
 tuning parameter but defaults to 1 for computational tractibility}
@@ -47,28 +57,37 @@ tuning parameter but defaults to 1 for computational tractibility}
 
 \item{maxit}{Maximum number of iterations. Default is 5000}
 
-\item{delta}{Tolerance for convergence. Defaults to 1e-5}
+\item{tol}{Tolerance for convergence. Default is 1e-5}
 }
 \value{
-TODO
+An object of type "higlasso" with 4 elements:
+\describe{
+\item{lambda}{An \code{nlambda1 x nlambda2 x 2} array containing each
+pair \code{(lambda1, lambda2)} pair.}
+\item{selected}{An \code{nlambda1 x nlambda2 x ncol(X)} array containing
+higlasso's selections for each lambda pair.}
+\item{df}{The number of nonzero selections for each lambda pair.}
+\item{call}{The call that generated the output.}
+}
 }
 \description{
-HiGLASSO is a regularization method designed to detect non linear
-interactions between variables, particulary exposures in environmental
-health studies.
-We have designed \code{higlasso} to
+HiGLASSO is a regularization based selection method designed to detect
+non-linear interactions between variables, particulary exposures in
+environmental health studies.
+}
+\details{
+We have designed HiGLASSO to
 \itemize{
 \item Impose strong heredity constraints on two-way interaction effects
 (hierarchical).
 \item Incorporate adaptive weights without necessitating initial
-coefficient estimates.
+coefficient estimates (integrative).
 \item Induce sparsity for variable selection while respecting group
 structure (group LASSO).
 }
-}
-\details{
+
 The objective function \code{higlasso} solves is
-% Renders the objective function as html in Rstudio and in raw tex otherwise.
+
 \ifelse{html}{\out{<center> argmin &beta;<sub>j</sub>, &eta;<sub>jj'</sub>
 &frac12;|| Y - X<sub>j</sub> &beta;<sub>j</sub> -
 X<sub>jj'</sub> (&eta;<sub>jj'</sub> &odot; &beta;<sub>j</sub>
@@ -83,20 +102,13 @@ X<sub>jj'</sub> (&eta;<sub>jj'</sub> &odot; &beta;<sub>j</sub>
 \examples{
 library(higlasso)
 
-X <- higlasso.df[, paste0("X", 1:10)]
-Y <- higlasso.df$y
+X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
+Y <- higlasso.df$Y
+Z <- matrix(1, nrow(X))
 
-Y.train <- Y[1:400]
-X.train <- as.matrix(X[1:400,])
-Z.train <- matrix(1, 400)
-
-X.test <- as.matrix(X[401:500,])
-Y.test  <- Y[401:500]
-Z.test  <- matrix(1, 100)
 \dontrun{
 # This can take a bit of time
-higlasso.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
-                         X.test = X.test, Z.test = Z.test)
+higlasso.fit <- higlasso(Y, X, Z)
 }
 }
 \references{
