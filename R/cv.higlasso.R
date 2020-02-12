@@ -1,35 +1,39 @@
 #' Cross Validated Hierarchical Integrative Group LASSO
 #'
-#' HiGLASSO is a regularization based selection method designed to detect
-#' non-linear interactions between variables, particulary exposures in
-#' environmental health studies.
-#' We have designed HiGLASSO to
+#' Does k-fold cross-validation for \code{higlasso}, and returns optimal values
+#' for \code{lambda1} and \code{lambda2}.
+#'
+#' There are a few things to keep in mind when using \code{cv.higlasso}
 #' \itemize{
-#'   \item Impose strong heredity constraints on two-way interaction effects
-#'       (hierarchical).
-#'   \item Incorporate adaptive weights without necessitating initial
-#'       coefficient estimates (integrative).
-#'   \item Induce sparsity for variable selection while respecting group
-#'       structure (group LASSO).
+#'     \item{\code{higlasso} uses the strong heredity principle. That is,
+#'           \code{X_1} and \code{X_2} must included as main effects before the
+#'           interaction \code{X_1 X_2} can be included.
 #' }
-#'
-#' The objective function \code{higlasso} solves is
-#' \ifelse{html}{\out{<center> argmin &beta;<sub>j</sub>, &eta;<sub>jj'</sub>
-#' &frac12;|| Y - X<sub>j</sub> &beta;<sub>j</sub> -
-#' X<sub>jj'</sub> (&eta;<sub>jj'</sub> &odot; &beta;<sub>j</sub>
-#' &otimes; &beta;<sub>j'</sub>)||<sup>2</sup>
-#' + &lambda;<sub>1</sub>w<sub>j</sub>||&beta;<sub>j</sub> || +
-#' &lambda;<sub>2</sub> w<sub>jj'</sub> ||&eta;<sub>jj'</sub>||
-#' </center>}}{
-#' \deqn{argmin \\beta_j, \\eta_{jj'} \frac{1}{2}|| Y - X_j \\beta_j}
-#' \deqn{- X_{jj'} (\\eta_{jj'} \odot \\beta_j \otimes \\beta_{j'})||^2}
-#' \deqn{+ \\lambda_1 w_j ||\\beta_j|| + \\lambda_2 w_{jj'} || \\eta_{jj'}||}}
-#'
+#'     \item{While \code{higlasso} uses integrative weights to help with
+#'           estimation, \code{higlasso} is more of a selection method.
+#'           As a result, \code{cv.higlasso} does not output coefficient
+#'           estimates, only which variables are selected.
+#' }
+#'     \item{Simulation studies suggest that `higlasso` is a very
+#'           conservative method when it comes to selecting interactions.
+#'           That is, \code{higlasso} has a low false positive rate and the
+#'           identification of a nonlinear interaction is a good indicator that
+#'           further investigation is worthwhile.
+#' }
+#' \item{\code{cv.higlasso} can be slow, so it may may be beneficial to
+#'       tweak some of its settings (for example, \code{nlambda1},
+#'       \code{nlambda2}, and \code{nfolds}) to get a handle on how long the
+#'       method will take before running the full model.
+#' }}
+#' As a side effect of the conservativeness of the method, we have found that
+#' using the 1 standard error rule results in overly sparse models, and that
+#' \code{lambda.min} generally performs better.
 #' @param Y A length n numeric response vector
 #' @param X A n x p numeric matrix
 #' @param Z A n x m numeric matrix
-#' @param method Type of initialization to use. Possible choices are "gglasso"
-#'     for group LASSO and "aenet" for adaptive elastic net. Default is "aenet"
+#' @param method Type of initialization to use. Possible choices are
+#'     \code{gglasso} for group LASSO and \code{aenet} for adaptive elastic net. Default is
+#'     \code{aenet}
 #' @param lambda1 A numeric vector of main effect penalties on which to tune
 #'     By default, \code{lambda1 = NULL} and higlasso generates a length
 #'     \code{nlambda1} sequence of lambda1s based off of the data and
@@ -47,16 +51,19 @@
 #' @param nfolds Number of folds for cross validation. Default is 10. The
 #'     minimum is 3, and while the maximum is the number of observations
 #'     (ie leave one out cross validation)
-#' @param foldid TODO
+#' @param foldid An optional vector of values between 1 and
+#'     \code{max(foldid)} identifying what fold each observation is in. Default
+#'     is NULL and \code{cv.higlasso} will automatically generate \code{foldid}
+#'     based off of \code{nfolds}
 #' @param sigma Scale parameter for integrative weights. Technically a third
-#'     tuning parameter but defaults to 1 for computational tractibility
+#'     tuning parameter but defaults to 1 for computational tractability
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param tol Tolerance for convergence. Defaults to 1e-5
 #' @author Alexander Rix
 #' @references TODO
 #' @return
-#' An object of type "cv.higlasso" with 7 elements
+#' An object of type \code{cv.higlasso} with 7 elements
 #' \describe{
 #' \item{lambda}{An \code{nlambda1 x nlambda2 x 2} array containing each
 #'     pair \code{(lambda1, lambda2)} pair.}
@@ -64,7 +71,7 @@
 #' \item{lambda.1se}{}
 #' \item{cvm}{cross validation error at each lambda pair. The error is
 #'     calculated from the mean square error.}
-#' \item{cvse}{standard error of 'cvm' at each lambda pair.}
+#' \item{cvse}{standard error of \code{cvm} at each lambda pair.}
 #' \item{higlasso.fit}{higlasso output from fitting the whole data.}
 #' \item{call}{The call that generated the output.}
 #' }
@@ -98,12 +105,14 @@ cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
 
     n <- length(Y)
     if (!is.null(foldid)) {
-        stop("Not implemented")
+        if (!is.numeric(foldid) || !is.vector(foldid) || length(foldid) != n)
+            stop("'foldid' must be length n numeric vector.")
+        nfolds <- max(foldid)
     } else {
       r     <- n %% nfolds
       p     <- (n - r) / nfolds
-      folds <- c(rep(1:nfolds, p), seq(len = r))
-      folds <- sample(folds, n)
+      foldid <- c(rep(1:nfolds, p), seq(len = r))
+      foldid <- sample(foldid, n)
     }
 
     matrices <- generate_design_matrices(X, degree)
@@ -121,20 +130,20 @@ cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
     cvm <- array(0, c(nlambda1, nlambda2, nfolds))
     cvse <- matrix(0, nlambda1, nlambda2)
     for (i in 1:nfolds) {
-        Y.train <- Y[folds != i]
-        Z.train <- Z[folds != i,, drop = F]
+        Y.train <- Y[foldid != i]
+        Z.train <- Z[foldid != i,, drop = F]
 
-        Xm.train <- purrr::map(Xm, ~ .x[folds != i,, drop = F])
+        Xm.train <- purrr::map(Xm, ~ .x[foldid != i,, drop = F])
         Xi.train <- purrr::map(Xi, function(Xi)
             if (nrow(Xi) > 0)
-                Xi[folds != i,, drop = F]
+                Xi[foldid != i,, drop = F]
             else
                 Xi
         )
-        X.xp.train <- X.xp[folds != i,, drop = F]
+        X.xp.train <- X.xp[foldid != i,, drop = F]
 
-        X.xp.test <- X.xp[folds == i,, drop = F]
-        Y.test  <- Y[folds == i]
+        X.xp.test <- X.xp[foldid == i,, drop = F]
+        Y.test  <- Y[foldid == i]
 
         cv.fit <- higlasso.fit(Y.train, Xm.train, Xi.train, Z.train, X.xp.train,
                                px, pz, method, lambda1,  lambda2, sigma, groups,

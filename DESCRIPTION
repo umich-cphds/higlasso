@@ -1,6 +1,6 @@
 Package: higlasso
 Title: Hierarchical Integrative Group LASSO
-Version: 0.5.0
+Version: 0.7.0
 Authors@R:
     c(
         person(given = "Alexander",
@@ -10,11 +10,11 @@ Authors@R:
         person(given = "Jonathan",
                family = "Boss",
                role = c("aut"),
-                  email = "bossjona@umich.edu")
+               email = "bossjona@umich.edu")
     )
 Description:
     Environmental health studies are increasingly measuring multiple pollutants
-    to  characterize the joint health effects attributable to exposure mixtures.
+    to characterize the joint health effects attributable to exposure mixtures.
     However, the underlying dose-response relation- ship between toxicants and
     health outcomes of interest may be highly nonlinear, with possible nonlinear
     interaction effects. We present hierarchical integrative group LASSO
@@ -27,6 +27,7 @@ Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.0.2
+Depends: R (>= 3.5.0)
 Imports:
     gcdnet,
     gglasso,

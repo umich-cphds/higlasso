@@ -1,37 +1,39 @@
 #' Hierarchical Integrative Group LASSO
 #'
 #' HiGLASSO is a regularization based selection method designed to detect
-#' non-linear interactions between variables, particulary exposures in
+#' non-linear interactions between variables, particularly exposures in
 #' environmental health studies.
 #'
-#' We have designed HiGLASSO to
+#'
+#' There are a few things to keep in mind when using \code{higlasso}
 #' \itemize{
-#'   \item Impose strong heredity constraints on two-way interaction effects
-#'       (hierarchical).
-#'   \item Incorporate adaptive weights without necessitating initial
-#'       coefficient estimates (integrative).
-#'   \item Induce sparsity for variable selection while respecting group
-#'       structure (group LASSO).
+#'     \item{\code{higlasso} uses the strong heredity principle. That is,
+#'           \code{X_1} and \code{X_2} must included as main effects before the
+#'           interaction \code{X_1 X_2} can be included.
 #' }
-#'
-#' The objective function \code{higlasso} solves is
-#'
-#' \ifelse{html}{\out{<center> argmin &beta;<sub>j</sub>, &eta;<sub>jj'</sub>
-#' &frac12;|| Y - X<sub>j</sub> &beta;<sub>j</sub> -
-#' X<sub>jj'</sub> (&eta;<sub>jj'</sub> &odot; &beta;<sub>j</sub>
-#' &otimes; &beta;<sub>j'</sub>)||<sup>2</sup>
-#' + &lambda;<sub>1</sub>w<sub>j</sub>||&beta;<sub>j</sub> || +
-#' &lambda;<sub>2</sub> w<sub>jj'</sub> ||&eta;<sub>jj'</sub>||
-#' </center>}}{
-#' \deqn{argmin \\beta_j, \\eta_{jj'} \frac{1}{2}|| Y - X_j \\beta_j}
-#' \deqn{- X_{jj'} (\\eta_{jj'} \odot \\beta_j \otimes \\beta_{j'})||^2}
-#' \deqn{+ \\lambda_1 w_j ||\\beta_j|| + \\lambda_2 w_{jj'} || \\eta_{jj'}||}}
+#'     \item{While \code{higlasso} uses integrative weights to help with
+#'           estimation, \code{higlasso} is more of a selection method.
+#'           As a result, \code{higlasso} does not output coefficient estimates,
+#'           only which variables are selected.
+#' }
+#'     \item{Simulation studies suggest that `higlasso` is a very
+#'           conservative method when it comes to selecting interactions.
+#'           That is, \code{higlasso} has a low false positive rate and the
+#'           identification of a nonlinear interaction is a good indicator that
+#'           further investigation is worthwhile.
+#' }
+#' \item{\code{higlasso} can be slow, so it may may be beneficial to
+#'       tweak some of its settings (for example, \code{nlambda1} and
+#'        \code{nlambda2}) to get a handle on how long the method will take
+#'        before running the full model.
+#' }}
 #' @param Y A length n numeric response vector
 #' @param X A n x p numeric matrix of covariates to basis expand
 #' @param Z A n x m numeric matrix of non basis expanded and non
 #'     regularized covariates
-#' @param method Type of initialization to use. Possible choices are "gglasso"
-#'     for group LASSO and "aenet" for adaptive elastic net. Default is "aenet"
+#' @param method Type of initialization to use. Possible choices are \code{gglasso}
+#'     for group LASSO and \code{aenet} for adaptive elastic net. Default is
+#'     \code{aenet}
 #' @param lambda1 A numeric vector of main effect penalties on which to tune
 #'     By default, \code{lambda1 = NULL} and higlasso generates a length
 #'     \code{nlambda1} sequence of lambda1s based off of the data and
@@ -47,7 +49,7 @@
 #' @param lambda.min.ratio Ratio that calculates min lambda from max lambda.
 #'     Ignored if 'lambda1' or 'lambda2' is non NULL. Default is 0.05
 #' @param sigma Scale parameter for integrative weights. Technically a third
-#'     tuning parameter but defaults to 1 for computational tractibility
+#'     tuning parameter but defaults to 1 for computational tractability
 #' @param degree Degree of \code{bs} basis expansion. Default is 3
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param tol Tolerance for convergence. Default is 1e-5
@@ -100,7 +102,7 @@ higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
         stop("'maxit' should be an integer >= 1.")
 
     if (!is.numeric(tol) || tol <= 0)
-        stop("'tol' should be a postive number.")
+        stop("'tol' should be a positive number.")
 
     # get number of main effect variables.
 
