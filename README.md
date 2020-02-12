@@ -1,5 +1,16 @@
-higlasso
-========
+Hierarchical Integrative Grouped LASSO
+======================================
+
+Environmental health studies are increasingly measuring multiple
+pollutants to characterize the joint health effects attributable to
+exposure mixtures. However, the underlying dose-response relation- ship
+between toxicants and health outcomes of interest may be highly
+nonlinear, with possible nonlinear interaction effects. Hierarchical
+integrative group LASSO (HiGLASSO) is a general shrinkage and selection
+framework to identify noteworthy nonlinear main and interaction.
+HiGLASSO is broadly applicable for studying potential nonlinear main and
+interaction effects in the presence of group structures among a set of
+exposures.
 
 Installation
 ------------
@@ -12,20 +23,31 @@ Installation
 You'll need a working C++11 compiler, which can obtained by installing
 Xcode on MacOS, and RTools on Windows. \#\# Example
 
-This is a very rough example on how to run higlasso
+`higlasso` can be slow, so it may may be beneficial to tweak some its
+settings (for example, `nlambda1` and `nlambda2`) to get a handle on how
+long the method will take before running the full model.
 
     library(higlasso)
 
-    X <- higlasso.df[, paste0("X", 1:10)]
-    Y <- higlasso.df$y
+    X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
+    Y <- higlasso.df$Y
+    Z <- matrix(1, nrow(X))
 
-    Y.train <- Y[1:400]
-    X.train <- as.matrix(X[1:400,])
-    Z.train <- matrix(1, 400)
+    # This can take a bit of time
+    cv.fit <- cv.higlasso(Y, X, Z)
 
-    X.test <- as.matrix(X[401:500,])
-    Y.test  <- Y[401:500]
-    Z.test  <- matrix(1, 100)
+Bugs
+----
 
-    higlass.out <- higlasso(Y.train, X.train, Z.train, Y.test = Y.test,
-                            X.test = X.test, Z.test = Z.test)
+If you encounter a bug, please open an issue on the
+[Issues](https://github.com/umich-cphds/higlasso/issues) tab on Github
+or send us an email.
+
+Contact
+-------
+
+For questions or feedback, please email Jonathan Boss at
+<bossjona@umich.edu> or Alexander Rix <alexrix@umich.edu>.
+
+References
+----------
