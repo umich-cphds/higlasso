@@ -1,15 +1,20 @@
 ---
 output: md_document
 ---
-# Hierarchical Integrative Grouped LASSO
+
+<!-- Badges -->
+[![CRAN Version](https://img.shields.io/cran/v/mianet?style=flat-square&color=blue&label=CRAN)](https://cran.r-project.org/package=higlasso)
+[![GitHub Release](https://img.shields.io/github/v/release/umich-cphds/higlasso?include_prereleases&label=Github&style=flat-square&color=blue)](https://github.com/umich-cphds/higlasso)
+[![Travis CI](https://img.shields.io/travis/umich-cphds/higlasso?style=flat-square)](https://travis-ci.org/umich-cphds/higlasso)
+
+# Hierarchical Integrative Group LASSO
 Environmental health studies are increasingly measuring multiple pollutants
 to characterize the joint health effects attributable to exposure mixtures.
-However, the underlying dose-response relation- ship between toxicants and
+However, the underlying dose-response relationship between toxicants and
 health outcomes of interest may be highly nonlinear, with possible nonlinear
 interaction effects. Hierarchical integrative group LASSO (HiGLASSO) is a
 general shrinkage and selection framework to identify noteworthy nonlinear
-main and interaction. HiGLASSO is broadly applicable for studying potential
-nonlinear main and interaction effects in the presence of group structures
+main and interaction effects in the presence of group structures
 among a set of exposures.
 
 ## Installation
@@ -21,22 +26,25 @@ devtools::install_github("umich-cphds/higlasso")
 ```
 You'll need a working C++11 compiler, which can obtained by installing Xcode on
 MacOS, and RTools on Windows.
-## Example
 
+## Example
 `higlasso` can be slow, so it may may be beneficial to tweak some its settings
 (for example, `nlambda1` and `nlambda2`) to get a handle on how long the method
 will take before running the full model.
 
-```{r, eval = F}
+```{r, eval = T}
 library(higlasso)
+
+set.seed(48109)
 
 X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 
 # This can take a bit of time
-cv.fit <- cv.higlasso(Y, X, Z)
+fit <- cv.higlasso(Y, X, Z)
 
+print(fit)
 ```
 
 ## Bugs

@@ -32,8 +32,8 @@
 #' @param X A n x p numeric matrix
 #' @param Z A n x m numeric matrix
 #' @param method Type of initialization to use. Possible choices are
-#'     \code{gglasso} for group LASSO and \code{aenet} for adaptive elastic net. Default is
-#'     \code{aenet}
+#'     \code{gglasso} for group LASSO and \code{aenet} for adaptive elastic net.
+#'     Default is \code{aenet}
 #' @param lambda1 A numeric vector of main effect penalties on which to tune
 #'     By default, \code{lambda1 = NULL} and higlasso generates a length
 #'     \code{nlambda1} sequence of lambda1s based off of the data and
@@ -82,9 +82,11 @@
 #' Y <- higlasso.df$Y
 #' Z <- matrix(1, nrow(X))
 #'
-#' \dontrun{
+#' \donttest{
 #' # This can take a bit of time
-#' cv.fit <- cv.higlasso(Y, X, Z)
+#' fit <- cv.higlasso(Y, X, Z)
+#'
+#' print(cv.fit)
 #' }
 #' @export
 cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
@@ -149,6 +151,7 @@ cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
                                px, pz, method, lambda1,  lambda2, sigma, groups,
                                igroups, maxit, tol, call)
 
+        # Calculate cv error for fold
         for (j in seq(nlambda2)) {
             for (k in seq(nlambda1)) {
                 res <- Y.test - X.xp.test %*% cv.fit$coef[j, k, ]
@@ -174,4 +177,26 @@ cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
     structure(list(lambda = fit$lambda, lambda.min = lambda.min,
                    lambda.1se = lambda.1se, cvm = cvm, cvse = cvse,
                    higlasso.fit = fit, call = call), class = "cv.higlasso")
+}
+
+#' Print CV HiGLASSO Objects
+#'
+#' \code{print.cv.higlasso} print the fit and returns it invisibly.
+#' @param x An object of type "cv.higlasso" to print
+#' @param ... Further arguments passed to or from other methods
+#' @export
+print.cv.higlasso <- function(x, ...)
+{
+    n1 <- dim(x$lambda)[1]
+    n2 <- dim(x$lambda)[2]
+
+    dimnames(x$cvm) <- list(paste0("l1.", seq(n1)), paste0("l2.", seq(n2)))
+    cat("'cv.higlaso' fit:\n")
+    cat("Average cross validation error for each (lambda1, lambda2)\n")
+    print(x$cvm)
+    cat("Lambda min:\n")
+    cat(x$lambda.min, "\n")
+    cat("Lambda 1 SE:\n")
+    cat(x$lambda.1se, "\n")
+    invisible(x)
 }

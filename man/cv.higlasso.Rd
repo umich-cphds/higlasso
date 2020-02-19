@@ -30,8 +30,8 @@ cv.higlasso(
 \item{Z}{A n x m numeric matrix}
 
 \item{method}{Type of initialization to use. Possible choices are
-\code{gglasso} for group LASSO and \code{aenet} for adaptive elastic net. Default is
-\code{aenet}}
+\code{gglasso} for group LASSO and \code{aenet} for adaptive elastic net.
+Default is \code{aenet}}
 
 \item{lambda1}{A numeric vector of main effect penalties on which to tune
 By default, \code{lambda1 = NULL} and higlasso generates a length
@@ -122,9 +122,11 @@ X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 
-\dontrun{
+\donttest{
 # This can take a bit of time
-cv.fit <- cv.higlasso(Y, X, Z)
+fit <- cv.higlasso(Y, X, Z)
+
+print(cv.fit)
 }
 }
 \references{
