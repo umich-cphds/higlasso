@@ -1,2 +1,2 @@
-# higlasso v0.7.0
-* Initial higlasso release for Github
+# higlasso v0.2.0
+* higlasso beta release
