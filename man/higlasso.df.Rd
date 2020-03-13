@@ -4,7 +4,7 @@
 \name{higlasso.df}
 \alias{higlasso.df}
 \title{Synthetic Example Data For Higlasso}
-\format{A data.frame with 1000 observations on 11 variables:
+\format{A data.frame with 500 observations on 11 variables:
 \describe{
 \item{Y}{Continuous response.}
 \item{X1-X10}{Covariates.}

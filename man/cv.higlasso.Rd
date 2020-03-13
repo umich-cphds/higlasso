@@ -4,23 +4,10 @@
 \alias{cv.higlasso}
 \title{Cross Validated Hierarchical Integrative Group LASSO}
 \usage{
-cv.higlasso(
-  Y,
-  X,
-  Z,
-  method = c("aenet", "gglasso"),
-  lambda1 = NULL,
-  lambda2 = NULL,
-  nlambda1 = 10,
-  nlambda2 = 10,
-  lambda.min.ratio = 0.05,
-  nfolds = 10,
-  foldid = NULL,
-  sigma = 1,
-  degree = 3,
-  maxit = 5000,
-  tol = 1e-05
-)
+cv.higlasso(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
+  lambda2 = NULL, nlambda1 = 10, nlambda2 = 10,
+  lambda.min.ratio = 0.05, nfolds = 10, foldid = NULL, sigma = 1,
+  degree = 3, maxit = 5000, tol = 1e-05)
 }
 \arguments{
 \item{Y}{A length n numeric response vector}

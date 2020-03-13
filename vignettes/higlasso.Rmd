@@ -15,21 +15,20 @@ knitr::opts_chunk$set(
 )
 ```
 ## Introduction
-Environmental health studies are increasingly measuring multiple pollutants
-to characterize the joint health effects attributable to exposure mixtures.
-However, the underlying dose-response relationship between toxicants and
-health outcomes of interest may be highly nonlinear, with possible nonlinear
+Environmental health studies are increasingly measuring multiple pollutants to
+characterize the joint health effects attributable to exposure mixtures.
+However, the underlying dose-response relationship between toxicants and health
+outcomes of interest may be highly nonlinear, with possible nonlinear
 interaction effects. Hierarchical integrative group LASSO (HiGLASSO) is a
-general shrinkage and selection framework to identify noteworthy nonlinear
-main and interaction effects in the presence of group structures
-among a set of exposures.
+general shrinkage and selection framework to identify noteworthy nonlinear main
+and interaction effects in the presence of group structures among a set of
+exposures.
 
 The R package `higlasso` contains an efficient Rcpp implementation of HiGLASSO
 and provides a cross validated variant, `cv.higlasso` to assist in proper
 interaction detection. That being said, HiGLASSO is an time intensive algorithm
-and hence there is a limit to how many variables can used at once. `higlasso` is
-suitable to use on medium sized environmental health datasets (n = 1000, p = 10, 20).
-
+and hence there is a limit to how many variables can used at once. `higlasso`
+is suitable to use on medium sized environmental health datasets.
 
 ## Installation
 `higlasso` can be installed from CRAN
@@ -46,13 +45,13 @@ devtools::install_github("umich-cphds/higlasso")
 ```
 You'll need a working C++11 compiler, which can obtained by installing Xcode on
 MacOS, and RTools on Windows. The Github version may have bug fixes or new
-features than the CRAN version doesn't have, so it may be a good idea to take
-a look.
+features than the CRAN version doesn't have, so it may be a good idea to take a
+look.
 
 ## Example
-`higlasso` comes with an example data.frame, `higlasso.df` that is based off
-the first simulation case in the paper. It contains a numeric response and
-10 covariates, X1 - X10.
+`higlasso` comes with an example data.frame, `higlasso.df` that is based off the
+first simulation case in the paper. It contains a numeric response and 10
+covariates, X1 - X10.
 
 ```{r, eval = T}
 library(higlasso)
@@ -63,8 +62,9 @@ X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 
-# This can take a bit of time
-fit <- cv.higlasso(Y, X, Z)
+# This can take a bit of time, so we run the example with nondefault
+# parameters to
+fit <- cv.higlasso(Y, X, Z, nfolds = 5, degree = 2)
 
 print(fit)
 ```

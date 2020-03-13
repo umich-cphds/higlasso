@@ -4,21 +4,10 @@
 \alias{higlasso}
 \title{Hierarchical Integrative Group LASSO}
 \usage{
-higlasso(
-  Y,
-  X,
-  Z,
-  method = c("aenet", "gglasso"),
-  lambda1 = NULL,
-  lambda2 = NULL,
-  nlambda1 = 10,
-  nlambda2 = 10,
-  lambda.min.ratio = 0.05,
-  sigma = 1,
-  degree = 3,
-  maxit = 5000,
-  tol = 1e-05
-)
+higlasso(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
+  lambda2 = NULL, nlambda1 = 10, nlambda2 = 10,
+  lambda.min.ratio = 0.05, sigma = 1, degree = 3, maxit = 5000,
+  tol = 1e-05)
 }
 \arguments{
 \item{Y}{A length n numeric response vector}
