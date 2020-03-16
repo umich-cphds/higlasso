@@ -2,4 +2,4 @@
 * Initial CRAN release
 
 # higlasso v0.2.0
-* higlasso beta release
+* Beta version of higlasso used in paper

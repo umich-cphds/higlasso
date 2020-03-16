@@ -1,6 +1,6 @@
 Package: higlasso
 Title: Hierarchical Integrative Group LASSO
-Version: 0.7.0
+Version: 0.9.0
 Authors@R:
     c(
         person(given = "Alexander",
