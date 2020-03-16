@@ -64,7 +64,7 @@ Z <- matrix(1, nrow(X))
 
 # This can take a bit of time, so we run the example with nondefault
 # parameters to
-fit <- cv.higlasso(Y, X, Z, nfolds = 5, degree = 2)
+fit <- cv.higlasso(Y, X, Z, nlambda1 = 5, nlambda2 = 5, nfolds = 5, degree = 2)
 
 print(fit)
 ```
