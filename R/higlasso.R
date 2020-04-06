@@ -54,7 +54,12 @@
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param tol Tolerance for convergence. Default is 1e-5
 #' @author Alexander Rix
-#' @references TODO
+#' @references
+#' A Hierarchical Integrative Group LASSO (HiGLASSO) Framework for Analyzing
+#' Environmental Mixtures. Jonathan Boss, Alexander Rix, Yin-Hsiu Chen, Naveen N.
+#' Narisetty, Zhenke Wu, Kelly K. Ferguson, Thomas F. McElrath, John D. Meeker,
+#' Bhramar Mukherjee. 2020.
+#' arXiv:2003.12844
 #' @return
 #' An object of type "higlasso" with 4 elements:
 #' \describe{

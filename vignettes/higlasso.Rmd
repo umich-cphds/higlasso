@@ -69,7 +69,12 @@ fit <- cv.higlasso(Y, X, Z, nlambda1 = 5, nlambda2 = 5, nfolds = 5, degree = 2)
 print(fit)
 ```
 
-## Reference
+## References
+A Hierarchical Integrative Group LASSO (HiGLASSO) Framework for Analyzing
+Environmental Mixtures. Jonathan Boss, Alexander Rix, Yin-Hsiu Chen, Naveen N.
+Narisetty, Zhenke Wu, Kelly K. Ferguson, Thomas F. McElrath, John D. Meeker,
+Bhramar Mukherjee. 2020.
+arXiv:2003.12844
 
 ##Contact information
 

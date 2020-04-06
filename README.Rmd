@@ -3,7 +3,7 @@ output: md_document
 ---
 
 <!-- Badges -->
-[![CRAN Version](https://img.shields.io/cran/v/mianet?style=flat-square&color=blue&label=CRAN)](https://cran.r-project.org/package=higlasso)
+[![CRAN Version](https://img.shields.io/cran/v/higlaso?style=flat-square&color=blue&label=CRAN)](https://cran.r-project.org/package=higlasso)
 [![GitHub Release](https://img.shields.io/github/v/release/umich-cphds/higlasso?include_prereleases&label=Github&style=flat-square&color=blue)](https://github.com/umich-cphds/higlasso)
 [![Travis CI](https://img.shields.io/travis/umich-cphds/higlasso?style=flat-square)](https://travis-ci.org/umich-cphds/higlasso)
 
@@ -56,3 +56,8 @@ For questions or feedback, please email Jonathan Boss at
 <bossjona@umich.edu> or Alexander Rix <alexrix@umich.edu>.
 
 ## References
+A Hierarchical Integrative Group LASSO (HiGLASSO) Framework for Analyzing
+Environmental Mixtures. Jonathan Boss, Alexander Rix, Yin-Hsiu Chen, Naveen N.
+Narisetty, Zhenke Wu, Kelly K. Ferguson, Thomas F. McElrath, John D. Meeker,
+Bhramar Mukherjee. 2020.
+arXiv:2003.12844

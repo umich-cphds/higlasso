@@ -61,7 +61,12 @@
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param tol Tolerance for convergence. Defaults to 1e-5
 #' @author Alexander Rix
-#' @references TODO
+#' @references
+#' A Hierarchical Integrative Group LASSO (HiGLASSO) Framework for Analyzing
+#' Environmental Mixtures. Jonathan Boss, Alexander Rix, Yin-Hsiu Chen, Naveen N.
+#' Narisetty, Zhenke Wu, Kelly K. Ferguson, Thomas F. McElrath, John D. Meeker,
+#' Bhramar Mukherjee. 2020.
+#' arXiv:2003.12844
 #' @return
 #' An object of type \code{cv.higlasso} with 7 elements
 #' \describe{
@@ -82,11 +87,12 @@
 #' Y <- higlasso.df$Y
 #' Z <- matrix(1, nrow(X))
 #'
-#' \donttest{
+#'
 #' # This can take a bit of time
+#' \donttest{
 #' fit <- cv.higlasso(Y, X, Z)
 #'
-#' print(cv.fit)
+#' print(fit)
 #' }
 #' @export
 cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
