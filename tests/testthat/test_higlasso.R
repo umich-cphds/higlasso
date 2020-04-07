@@ -9,6 +9,6 @@ Z <- matrix(1, nrow(X))
 
 
 expect_silent({
-    higlasso.fit <- cv.higlasso(Y, X, Z, nfolds = 5)
+    higlasso.fit <- cv.higlasso(Y, X, Z, nfolds = 5, nlambda1 = 5, nlambda2 = 5)
 })
 })
