@@ -38,5 +38,6 @@ LinkingTo:
     RcppArmadillo
 Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat
 VignetteBuilder: knitr
