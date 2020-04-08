@@ -16,6 +16,20 @@ This is a re-submission.
 
 ## Reviewer comments
 
+> Please always explain all acronyms/abbreviations in the description text
+> in the Description field of the DESCRIPTION file.
+
+The only unexplained acronym in the DESCRIPTION is LASSO, which I think is
+common enough that that doesn't need to be explained.
+
+> Please add \value to all .Rd files for exported functions and explain
+> the functions results in the documentation.
+> f.i.: print.cv.higlasso.Rd
+> If a function does not return a value, please document that too, e.g.
+> \value{None}.
+
+print.cv.higlasso now has \value
+
 > ** running tests for arch 'i386' ... [532s] OK
 > ** running tests for arch 'x64' ... [482s] OK
 > ** checking re-building of vignette outputs ... [278s] OK
