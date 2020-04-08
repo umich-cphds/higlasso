@@ -11,6 +11,10 @@
 
 \item{...}{Further arguments passed to or from other methods}
 }
+\value{
+The original input, \code{x} (invisibly).
+}
 \description{
-\code{print.cv.higlasso} print the fit and returns it invisibly.
+\code{print.cv.higlasso} prints a fitted "cv.higlaso" object and returns it
+invisibly.
 }

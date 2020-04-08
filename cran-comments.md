@@ -20,7 +20,7 @@ This is a re-submission.
 > in the Description field of the DESCRIPTION file.
 
 The only unexplained acronym in the DESCRIPTION is LASSO, which I think is
-common enough that that doesn't need to be explained.
+common enough that doesn't need to be explained.
 
 > Please add \value to all .Rd files for exported functions and explain
 > the functions results in the documentation.

@@ -187,9 +187,11 @@ cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
 
 #' Print CV HiGLASSO Objects
 #'
-#' \code{print.cv.higlasso} print the fit and returns it invisibly.
+#' \code{print.cv.higlasso} prints a fitted "cv.higlaso" object and returns it
+#' invisibly.
 #' @param x An object of type "cv.higlasso" to print
 #' @param ... Further arguments passed to or from other methods
+#' @return The original input, \code{x} (invisibly).
 #' @export
 print.cv.higlasso <- function(x, ...)
 {
