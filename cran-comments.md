@@ -19,8 +19,7 @@ This is a re-submission.
 > Please always explain all acronyms/abbreviations in the description text
 > in the Description field of the DESCRIPTION file.
 
-The only unexplained acronym in the DESCRIPTION is LASSO, which I think is
-common enough that doesn't need to be explained.
+LASSO has been replaced by Least Absolute Shrinkage and Selection Operator.
 
 > Please add \value to all .Rd files for exported functions and explain
 > the functions results in the documentation.
@@ -28,7 +27,7 @@ common enough that doesn't need to be explained.
 > If a function does not return a value, please document that too, e.g.
 > \value{None}.
 
-print.cv.higlasso now has \value
+print.cv.higlasso now has a value
 
 > ** running tests for arch 'i386' ... [532s] OK
 > ** running tests for arch 'x64' ... [482s] OK

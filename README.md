@@ -14,9 +14,10 @@ pollutants to characterize the joint health effects attributable to
 exposure mixtures. However, the underlying dose-response relationship
 between toxicants and health outcomes of interest may be highly
 nonlinear, with possible nonlinear interaction effects. Hierarchical
-integrative group LASSO (HiGLASSO) is a general shrinkage and selection
-framework to identify noteworthy nonlinear main and interaction effects
-in the presence of group structures among a set of exposures.
+integrative group least absolute shrinkage and selection operator
+(HiGLASSO) is a general framework to identify noteworthy nonlinear main
+and interaction effects in the presence of group structures among a set
+of exposures.
 
 Installation
 ------------
