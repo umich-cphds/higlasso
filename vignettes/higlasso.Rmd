@@ -26,7 +26,7 @@ structures among a set of exposures.
 
 The R package `higlasso` contains an efficient Rcpp implementation of HiGLASSO
 and provides a cross validated variant, `cv.higlasso` to assist in proper
-interaction detection. That being said, HiGLASSO is an time intensive algorithm
+interaction detection. That being said, HiGLASSO is a time intensive algorithm
 and hence there is a limit to how many variables can used at once. `higlasso`
 is suitable to use on medium sized environmental health datasets.
 
