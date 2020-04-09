@@ -10,3 +10,4 @@ cache: packages
 branches:
   only:
   - master
+r_check_args: --as-cran
