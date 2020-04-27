@@ -15,7 +15,7 @@ higlasso(
   nlambda2 = 10,
   lambda.min.ratio = 0.05,
   sigma = 1,
-  degree = 3,
+  degree = 2,
   maxit = 5000,
   tol = 1e-05
 )
@@ -103,7 +103,7 @@ before running the full model.
 \examples{
 library(higlasso)
 
-X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
+X <- as.matrix(higlasso.df[, paste0("V", 1:8)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 

@@ -37,7 +37,7 @@ library(higlasso)
 
 set.seed(48109)
 
-X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
+X <- as.matrix(higlasso.df[, paste0("V", 1:8)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 

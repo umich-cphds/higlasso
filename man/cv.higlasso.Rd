@@ -14,10 +14,10 @@ cv.higlasso(
   nlambda1 = 10,
   nlambda2 = 10,
   lambda.min.ratio = 0.05,
-  nfolds = 10,
+  nfolds = 5,
   foldid = NULL,
   sigma = 1,
-  degree = 3,
+  degree = 2,
   maxit = 5000,
   tol = 1e-05
 )
@@ -118,7 +118,7 @@ using the 1 standard error rule results in overly sparse models, and that
 \examples{
 library(higlasso)
 
-X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
+X <- as.matrix(higlasso.df[, paste0("V", 1:8)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 

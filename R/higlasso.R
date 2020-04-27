@@ -73,7 +73,7 @@
 #' @examples
 #' library(higlasso)
 #'
-#' X <- as.matrix(higlasso.df[, paste0("V", 1:10)])
+#' X <- as.matrix(higlasso.df[, paste0("V", 1:8)])
 #' Y <- higlasso.df$Y
 #' Z <- matrix(1, nrow(X))
 #'
@@ -84,10 +84,9 @@
 #' @export
 higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
                      lambda2 = NULL, nlambda1 = 10, nlambda2 = 10,
-                     lambda.min.ratio = .05, sigma = 1, degree = 3,
+                     lambda.min.ratio = .05, sigma = 1, degree = 2,
                      maxit = 5000, tol = 1e-5)
 {
-
     call <- match.call()
 
     check.Y(Y)
