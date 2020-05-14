@@ -34,7 +34,8 @@ generate_design_matrices <- function(X, degree)
 
     # construct "inverse" of groups
     igroups <- vector("list", max(groups))
-    purrr::iwalk(groups, function(g, i) igroups[[g]] <<- c(igroups[[g]], i))
+    for (i in seq(length(groups)))
+        igroups[[groups[i]]] <- c(igroups[[groups[i]]], i)
 
     X.xp <- do.call("cbind", c(unname(Xm), Xi[j]))
 

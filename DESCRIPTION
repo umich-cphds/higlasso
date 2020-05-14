@@ -13,14 +13,15 @@ Authors@R:
                email = "bossjona@umich.edu")
     )
 Description:
-    Environmental health studies are increasingly measuring multiple pollutants 
+    Environmental health studies are increasingly measuring multiple pollutants
     to characterize the joint health effects attributable to exposure mixtures.
     However, the underlying dose-response relationship between toxicants and
     health outcomes of interest may be highly nonlinear, with possible nonlinear
     interaction effects. Hierarchical integrative group least absolute shrinkage
-    and selection operator (HiGLASSO) is a general framework to identify
-    noteworthy nonlinear main and interaction effects in the presence of group
-    structures among a set of exposures.
+    and selection operator (HiGLASSO), developed by Boss et al (2020)
+    <arXiv:2003.12844>, is a general framework to identify noteworthy nonlinear 
+    main and interaction effects in the presence of group structures among a set
+    of exposures.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

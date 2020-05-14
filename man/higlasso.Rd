@@ -54,7 +54,7 @@ Ignored if 'lambda1' or 'lambda2' is non NULL. Default is 0.05}
 \item{sigma}{Scale parameter for integrative weights. Technically a third
 tuning parameter but defaults to 1 for computational tractability}
 
-\item{degree}{Degree of \code{bs} basis expansion. Default is 3}
+\item{degree}{Degree of \code{bs} basis expansion. Default is 2}
 
 \item{maxit}{Maximum number of iterations. Default is 5000}
 
@@ -103,11 +103,11 @@ before running the full model.
 \examples{
 library(higlasso)
 
-X <- as.matrix(higlasso.df[, paste0("V", 1:8)])
+X <- as.matrix(higlasso.df[, paste0("V", 1:7)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 
-\dontrun{
+\donttest{
 # This can take a bit of time
 higlasso.fit <- higlasso(Y, X, Z)
 }

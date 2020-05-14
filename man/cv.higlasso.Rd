@@ -64,7 +64,7 @@ based off of \code{nfolds}}
 \item{sigma}{Scale parameter for integrative weights. Technically a third
 tuning parameter but defaults to 1 for computational tractability}
 
-\item{degree}{Degree of \code{bs} basis expansion. Default is 3}
+\item{degree}{Degree of \code{bs} basis expansion. Default is 2}
 
 \item{maxit}{Maximum number of iterations. Default is 5000}
 
@@ -118,7 +118,7 @@ using the 1 standard error rule results in overly sparse models, and that
 \examples{
 library(higlasso)
 
-X <- as.matrix(higlasso.df[, paste0("V", 1:8)])
+X <- as.matrix(higlasso.df[, paste0("V", 1:7)])
 Y <- higlasso.df$Y
 Z <- matrix(1, nrow(X))
 

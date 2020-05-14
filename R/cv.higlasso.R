@@ -57,7 +57,7 @@
 #'     based off of \code{nfolds}
 #' @param sigma Scale parameter for integrative weights. Technically a third
 #'     tuning parameter but defaults to 1 for computational tractability
-#' @param degree Degree of \code{bs} basis expansion. Default is 3
+#' @param degree Degree of \code{bs} basis expansion. Default is 2
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param tol Tolerance for convergence. Defaults to 1e-5
 #' @author Alexander Rix
@@ -83,7 +83,7 @@
 #' @examples
 #' library(higlasso)
 #'
-#' X <- as.matrix(higlasso.df[, paste0("V", 1:8)])
+#' X <- as.matrix(higlasso.df[, paste0("V", 1:7)])
 #' Y <- higlasso.df$Y
 #' Z <- matrix(1, nrow(X))
 #'
