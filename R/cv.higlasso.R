@@ -57,7 +57,10 @@
 #'     based off of \code{nfolds}
 #' @param sigma Scale parameter for integrative weights. Technically a third
 #'     tuning parameter but defaults to 1 for computational tractability
-#' @param degree Degree of \code{bs} basis expansion. Default is 2
+#' @param basis.function Function that performs a basis expansion on each
+#'     variable. The default is \code{bs}, from the 'splines' package. The main
+#'     requirement is that the function can take a single column from the design
+#'     matrix and turn it into a (basis expanded) matrix
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param tol Tolerance for convergence. Defaults to 1e-5
 #' @author Alexander Rix
@@ -98,12 +101,13 @@
 cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
                         lambda2 = NULL, nlambda1 = 10, nlambda2 = 10,
                         lambda.min.ratio = .05, nfolds = 5, foldid = NULL,
-                        sigma = 1, degree = 2, maxit = 5000, tol = 1e-5)
+                        sigma = 1, basis.function = splines::bs, maxit = 5000,
+                        tol = 1e-5)
 {
     call <- match.call()
     method <- match.arg(method)
     fit <- higlasso(Y, X, Z, method, lambda1, lambda2, nlambda1, nlambda2,
-                    lambda.min.ratio, sigma, degree, maxit, tol)
+                    lambda.min.ratio, sigma, basis.function, maxit, tol)
 
     lambda1 <- fit$lambda[, 1, 1]
     lambda2 <- fit$lambda[1, , 2]
@@ -123,7 +127,7 @@ cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
       foldid <- sample(foldid, n)
     }
 
-    matrices <- generate_design_matrices(X, degree)
+    matrices <- generate_design_matrices(X, basis.function)
 
     Xm <- matrices$Xm
     Xi <- matrices$Xi
@@ -131,8 +135,8 @@ cv.higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
     groups <- matrices$groups
     igroups <- matrices$igroups
 
-    px       <- ncol(X.xp)
-    pz       <- ncol(Z)
+    px    <- ncol(X.xp)
+    pz    <- ncol(Z)
     X.xp  <- cbind(X.xp, Z)
 
     cvm <- array(0, c(nlambda1, nlambda2, nfolds))

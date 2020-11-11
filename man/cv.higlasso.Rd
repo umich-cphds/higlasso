@@ -17,7 +17,7 @@ cv.higlasso(
   nfolds = 5,
   foldid = NULL,
   sigma = 1,
-  degree = 2,
+  basis.function = splines::bs,
   maxit = 5000,
   tol = 1e-05
 )
@@ -64,7 +64,9 @@ based off of \code{nfolds}}
 \item{sigma}{Scale parameter for integrative weights. Technically a third
 tuning parameter but defaults to 1 for computational tractability}
 
-\item{degree}{Degree of \code{bs} basis expansion. Default is 2}
+\item{basis.function}{Function that performs a basis expansion on each
+variable. The default is \code{bs}, from the 'splines' package. See
+\code{higlaso} documenation for examples on changing the basis function.}
 
 \item{maxit}{Maximum number of iterations. Default is 5000}
 

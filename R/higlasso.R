@@ -50,7 +50,10 @@
 #'     Ignored if 'lambda1' or 'lambda2' is non NULL. Default is 0.05
 #' @param sigma Scale parameter for integrative weights. Technically a third
 #'     tuning parameter but defaults to 1 for computational tractability
-#' @param degree Degree of \code{bs} basis expansion. Default is 2
+#' @param basis.function Function that performs a basis expansion on each
+#'     variable. The default is \code{bs}, from the 'splines' package. The main
+#'     requirement is that the function can take a single column from the design
+#'     matrix and turn it into a (basis expanded) matrix
 #' @param maxit Maximum number of iterations. Default is 5000
 #' @param tol Tolerance for convergence. Default is 1e-5
 #' @author Alexander Rix
@@ -81,11 +84,15 @@
 #' # This can take a bit of time
 #' higlasso.fit <- higlasso(Y, X, Z)
 #' }
+
+#' You can specify alternate basis expansions by changing 'basis.function'
+#' bf = function(x) splines::bs(x, df = 4)
+#' higlasso.fit <- higlasso(Y, X, Z, basis.function = bf)
 #' @export
 higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
                      lambda2 = NULL, nlambda1 = 10, nlambda2 = 10,
-                     lambda.min.ratio = .05, sigma = 1, degree = 2,
-                     maxit = 5000, tol = 1e-5)
+                     lambda.min.ratio = .05, sigma = 1, basis.function =
+                     splines::bs, maxit = 5000, tol = 1e-5)
 {
     call <- match.call()
 
@@ -94,13 +101,15 @@ higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
     check.XZ(Z, Y)
 
     method <- match.arg(method)
+
+    if (!is.function(basis.function))
+        stop("'basis.function' must be a function.")
+    if (!is.matrix(basis.function(stats::rnorm(100))))
+        stop("'basis.function' must return a matrix.")
     if (!is.numeric(sigma) || sigma < 0)
         stop("'sigma' must be a nonnegative number.")
     if (length(sigma) > 1)
         stop("'sigma' must have unit length.")
-
-    if (!is.numeric(degree) || degree < 1)
-        stop("'degree' should be an integer >= 1.")
 
     if (!is.numeric(maxit) || maxit < 1)
         stop("'maxit' should be an integer >= 1.")
@@ -110,7 +119,7 @@ higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
 
     # get number of main effect variables.
 
-    matrices <- generate_design_matrices(X, degree)
+    matrices <- generate_design_matrices(X, basis.function)
 
     Xm <- matrices$Xm
     Xi <- matrices$Xi
@@ -121,7 +130,7 @@ higlasso <- function(Y, X, Z, method = c("aenet", "gglasso"), lambda1 = NULL,
     # X.xp <- do.call("cbind", c(unname(Xm), Xi[j]))
 
     # generate lambda sequences if user does not pre-specify them
-    p <- ncol(X) * degree
+    p <- sum(purrr::map_dbl(Xm, ~ ncol(.x)))
     YtX <- abs(Y %*% X.xp)[1,] / nrow(X.xp)
     if (!is.null(lambda1)) {
         if (!is.numeric(lambda1) || any(lambda1 <= 0))

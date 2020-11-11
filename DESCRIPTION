@@ -19,7 +19,7 @@ Description:
     health outcomes of interest may be highly nonlinear, with possible nonlinear
     interaction effects. Hierarchical integrative group least absolute shrinkage
     and selection operator (HiGLASSO), developed by Boss et al (2020)
-    <arXiv:2003.12844>, is a general framework to identify noteworthy nonlinear 
+    <arXiv:2003.12844>, is a general framework to identify noteworthy nonlinear
     main and interaction effects in the presence of group structures among a set
     of exposures.
 License: GPL-3

@@ -15,7 +15,7 @@ higlasso(
   nlambda2 = 10,
   lambda.min.ratio = 0.05,
   sigma = 1,
-  degree = 2,
+  basis.function = splines::bs,
   maxit = 5000,
   tol = 1e-05
 )
@@ -54,7 +54,8 @@ Ignored if 'lambda1' or 'lambda2' is non NULL. Default is 0.05}
 \item{sigma}{Scale parameter for integrative weights. Technically a third
 tuning parameter but defaults to 1 for computational tractability}
 
-\item{degree}{Degree of \code{bs} basis expansion. Default is 2}
+\item{basis.function}{Function that performs a basis expansion on each
+variable. The default is \code{bs}, from the 'splines' package}
 
 \item{maxit}{Maximum number of iterations. Default is 5000}
 
@@ -111,6 +112,9 @@ Z <- matrix(1, nrow(X))
 # This can take a bit of time
 higlasso.fit <- higlasso(Y, X, Z)
 }
+You can specify alternate basis expansions by changing 'basis.function'
+bf = function(x) splines::bs(x, df = 4)
+higlasso.fit <- higlasso(Y, X, Z, basis.function = bf)
 }
 \references{
 A Hierarchical Integrative Group LASSO (HiGLASSO) Framework for Analyzing

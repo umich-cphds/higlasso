@@ -1,8 +1,9 @@
-generate_design_matrices <- function(X, degree)
+generate_design_matrices <- function(X, basis.function)
 {
+
     generate.Xm <- function(i)
     {
-        m <- splines::bs(X[, i], degree = degree)
+        m <- basis.function(X[, i])
         apply(m, 2, function(x) (x - mean(x)) / stats::sd(x))
     }
 
